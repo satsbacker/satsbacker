@@ -14,16 +14,41 @@ getPort = do
   mstrport <- lookupEnv "PORT"
   return (fromMaybe 8002 (mstrport >>= readMaybe))
 
-preamble title = do
+template title = do
   doctype_
   html_ $ do
     head_ $ do
-      title_ title
+      title_ renderedTitle
+      meta_ [ name_ "viewport", content_ "width=device-width, initial-scale=1" ]
+      link_ [ rel_ "stylesheet", href_ "css/normalize.css" ]
+      link_ [ rel_ "stylesheet", href_ "css/skeleton.css" ]
+  where
+    renderedTitle =
+      maybe "bitsbacker" ("bitsbacker | " <>) title
+
+home = do
+  template Nothing
+  body_ (h1_ "Hello, world!")
+
+postSignup = do
+  name  <- param "name"
+  email <- param "email"
+  text (name <> email)
+
+signup = do
+  template (Just "signup")
+  body_ $ do
+    h1_ "Signup"
+    input_ [ id_ "name" ]
+    input_ [ id_ "email" ]
+
+
+content = html . renderText
 
 routes = do
-  get "/" . html . renderText $ do
-    preamble "Title"
-    body_ (h1_ "Hello, world!")
+  get  "/"       (content home)
+  get  "/signup" (content signup)
+  post "/signup" postSignup
 
 main :: IO ()
 main = do
