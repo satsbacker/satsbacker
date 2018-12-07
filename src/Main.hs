@@ -6,7 +6,6 @@
 module Main where
 
 import Data.Maybe (fromMaybe)
-import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text)
 import Database.SQLite.Simple (Connection)
 import Lucid
@@ -19,6 +18,7 @@ import Web.Scotty
 
 
 import Bitsbacker.Html
+import Bitsbacker.Html.User
 import Bitsbacker.DB (migrate, openDb)
 import Bitsbacker.Data.User
 
@@ -34,27 +34,6 @@ home = do
   template Nothing $ do
     h1_ "Hello, world!"
 
-backerPhrase :: Username -> Text -> Text
-backerPhrase (Username user) making =
-    user <> " is making " <> making
-
-backerPage :: User -> Html ()
-backerPage User{..} =
-  let
-    phrase = toHtml (backerPhrase userName userMaking)
-  in
-    template (Just phrase) $ do
-      div_ [ class_ "hero" ] $ do
-        h1_ phrase 
-
-lookupBackerPage :: Connection -> ActionM ()
-lookupBackerPage conn = do
-  username <- param "user"
-  muser <- liftIO $ getUser conn (Username username)
-  case muser of
-    Nothing   -> next
-    Just user -> content (backerPage user)
-
 postSignup :: ActionM ()
 postSignup = do
   name  <- param "name"
@@ -69,9 +48,6 @@ signup = do
       textInput "name"
       textInput "email"
 
-content :: Html a -> ActionM ()
-content = html . renderText
-
 static :: String -> Network.Wai.Middleware
 static path =
   staticPolicy (addBase path)
@@ -81,7 +57,7 @@ routes conn = do
   get  "/"       (content home)
   get  "/signup" (content signup)
   post "/signup" postSignup
-  get  "/:user"  (lookupBackerPage conn)
+  get  "/:user"  (lookupUserPage conn)
   middleware (static "public")
 
 createUserUsage :: IO ()
@@ -92,6 +68,11 @@ createUserUsage = do
 usage :: IO ()
 usage = do
   putStrLn "usage: bitsbacker <command>"
+  putStrLn ""
+  putStrLn "commands:"
+  putStrLn ""
+  putStrLn "  - create-user"
+  putStrLn ""
   exitFailure
 
 startServer :: Connection -> IO ()

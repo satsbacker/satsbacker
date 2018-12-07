@@ -6,6 +6,7 @@ import Lucid
 import Data.Text (Text)
 import Data.Char (toUpper)
 import qualified Data.Text as T
+import Web.Scotty
 
 
 capitalize :: Text -> Text
@@ -40,3 +41,6 @@ template title contents = do
   where
     renderedTitle =
       maybe "bitsbacker" (<> " | bitsbacker") title
+
+content :: Html a -> ActionM ()
+content = html . renderText
