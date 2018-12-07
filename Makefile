@@ -2,6 +2,6 @@
 all: bitsbacker
 
 bitsbacker: src/Main.hs
-	ghc --make $< -o $@
+	ghc -Wall -O2 --make $< -o $@
 
 .PHONY: bitsbacker

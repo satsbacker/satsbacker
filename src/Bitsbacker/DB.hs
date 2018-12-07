@@ -1,22 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Bitsbacker.DB.SQLite
+module Bitsbacker.DB
     ( migrate
+    , openDb
     ) where
 
 import Control.Monad (unless)
-import Data.ByteString (ByteString)
 import Data.Maybe (listToMaybe)
 import Data.Text (Text)
+import Data.Foldable (traverse_)
 import Data.Text.Encoding (encodeUtf8)
 import Database.SQLite.Simple
 import System.Directory (createDirectoryIfMissing)
 
 import qualified Data.ByteString as BS
-import qualified Data.Text as T
-
-newtype DBVersion = DBVersion { getDBVersion :: Int }
 
 
 -- ensureDb :: FilePath -> IO ()
@@ -24,8 +22,15 @@ newtype DBVersion = DBVersion { getDBVersion :: Int }
 
 migrations :: [Query]
 migrations = [
-    "CREATE TABLE version (version INTEGER)",
-    "INSERT INTO version (version) VALUES (1)"
+    "CREATE TABLE version (version INTEGER)",      -- 0
+    "INSERT INTO version (version) VALUES (1)",    -- 1
+
+    "CREATE TABLE users (id INTEGER PRIMARY KEY,\
+     \                   password TEXT, \
+     \                   email TEXT, \
+     \                   name TEXT, \
+     \                   permissions INTEGER) "    -- 2
+
   ]
 
 hasVersionTable :: Connection -> IO Bool
@@ -33,7 +38,6 @@ hasVersionTable conn = do
   res <- query_ conn "SELECT name from sqlite_master WHERE type='table' and name='version'"
            :: IO [Only Text]
   return (length res == 1)
-
 
 getDbVersion :: Connection -> IO Int
 getDbVersion conn = do
@@ -56,9 +60,11 @@ saveMigration from to stmts = do
       contents = foldMap ((<>"\n") . fromQuery) stmts
   BS.writeFile (".migrations/" ++ fileName) (encodeUtf8 contents)
 
-migrate :: IO ()
-migrate = do
-  conn <- open "bitsbacker.db"
+openDb :: IO Connection
+openDb = open "bitsbacker.db"
+
+migrate :: Connection -> IO ()
+migrate conn = do
   version <- getDbVersion conn
   let stmts          = drop version migrations
       latestVersion  = length migrations
@@ -68,7 +74,6 @@ migrate = do
               ++ show version ++ " to " ++ show latestVersion)
     else do
       withTransaction conn $ do
-        traverse (execute_ conn) stmts
+        traverse_ (execute_ conn) stmts
         updateVersion conn latestVersion
       saveMigration version latestVersion stmts
-

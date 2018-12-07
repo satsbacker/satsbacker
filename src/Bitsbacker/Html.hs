@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Html where
+module Bitsbacker.Html where
 
 import Lucid
 import Data.Text (Text)
@@ -14,10 +14,12 @@ capitalize t =
       Just (c, rest) -> T.cons (toUpper c) rest
       Nothing        -> t
 
+textInput :: Text -> Html ()
 textInput name = do
   label_ [ for_ name ] (toHtml (capitalize name))
   input_ [ class_ "u-full-width", id_ name, type_ "text" ]
 
+template :: Maybe (Html ()) -> Html () -> Html ()
 template title contents = do
   doctype_
   html_ $ do

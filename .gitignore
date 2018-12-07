@@ -2,3 +2,5 @@
 *.hi
 /bitsbacker
 /archive/
+/.migrations
+/bitsbacker.db
