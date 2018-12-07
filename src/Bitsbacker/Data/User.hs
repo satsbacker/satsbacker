@@ -4,19 +4,14 @@
 
 module Bitsbacker.Data.User where
 
-import Database.SQLite.Simple
+import Data.Maybe (listToMaybe)
 import Crypto.PasswordStore (makePassword)
-
-import Database.SQLite.Simple.FromField
-import Database.SQLite.Simple.ToField
-
--- import Database.PostgreSQL.Simple.ToRow as PG
--- import Database.PostgreSQL.Simple.FromRow as PG
--- import Database.PostgreSQL.Simple as PG
-
+import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
-import Data.ByteString (ByteString)
+import Database.SQLite.Simple
+import Database.SQLite.Simple.FromField
+import Database.SQLite.Simple.ToField
 
 import qualified Data.Text as T
 
@@ -41,6 +36,7 @@ data User = User {
     , userEmail          :: Email
     , userEmailConfirmed :: Bool
     , userPermissions    :: Permissions
+    , userMaking         :: Text
     }
 
 userFields :: [Text]
@@ -50,10 +46,12 @@ userFields = [
   , "email"
   , "email_confirmed"
   , "permissions"
+  , "making"
   ]
 
 instance FromRow User where
   fromRow = User <$> field
+                 <*> field
                  <*> field
                  <*> field
                  <*> field
@@ -66,6 +64,7 @@ instance ToRow User where
             , userEmail
             , userEmailConfirmed
             , userPermissions
+            , userMaking
             )
 
 defaultPermissions :: Permissions
@@ -80,6 +79,7 @@ createUser (Plaintext password) = do
              , userEmail          = Email ""
              , userEmailConfirmed = True
              , userPermissions    = defaultPermissions
+             , userMaking         = "their backer page"
            }
 
 insertUser :: Connection -> User -> IO Int
@@ -90,3 +90,10 @@ insertUser conn user = do
       q = "INSERT INTO users ("<>fields<>") values ("<>qsc<>")"
   execute conn (Query q) user
   fmap fromIntegral (lastInsertRowId conn)
+
+getUser :: Connection -> Username -> IO (Maybe User)
+getUser conn user = do
+  let fields = T.intercalate ", " userFields
+      q = "SELECT "<>fields<>" FROM users WHERE name = ? LIMIT 1"
+  users <- query conn (Query q) (Only user)
+  return (listToMaybe users)

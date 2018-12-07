@@ -39,4 +39,4 @@ template title contents = do
         contents
   where
     renderedTitle =
-      maybe "bitsbacker" ("bitsbacker | " <>) title
+      maybe "bitsbacker" (<> " | bitsbacker") title

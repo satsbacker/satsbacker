@@ -30,6 +30,7 @@ migrations = [
      \                   email TEXT, \
      \                   email_confirmed INTEGER, \
      \                   name TEXT unique, \
+     \                   making TEXT, \
      \                   permissions INTEGER) "    -- 2
 
   ]

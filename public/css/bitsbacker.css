@@ -3,6 +3,10 @@
     max-width: 800px;
 }
 
+.hero h1 {
+    text-align: center;
+}
+
 .header {
     padding: 10px 0 0 18px;
     margin-bottom: 40px;

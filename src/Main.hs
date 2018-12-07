@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -5,6 +6,7 @@
 module Main where
 
 import Data.Maybe (fromMaybe)
+import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text)
 import Database.SQLite.Simple (Connection)
 import Lucid
@@ -32,6 +34,27 @@ home = do
   template Nothing $ do
     h1_ "Hello, world!"
 
+backerPhrase :: Username -> Text -> Text
+backerPhrase (Username user) making =
+    user <> " is making " <> making
+
+backerPage :: User -> Html ()
+backerPage User{..} =
+  let
+    phrase = toHtml (backerPhrase userName userMaking)
+  in
+    template (Just phrase) $ do
+      div_ [ class_ "hero" ] $ do
+        h1_ phrase 
+
+lookupBackerPage :: Connection -> ActionM ()
+lookupBackerPage conn = do
+  username <- param "user"
+  muser <- liftIO $ getUser conn (Username username)
+  case muser of
+    Nothing   -> next
+    Just user -> content (backerPage user)
+
 postSignup :: ActionM ()
 postSignup = do
   name  <- param "name"
@@ -53,11 +76,12 @@ static :: String -> Network.Wai.Middleware
 static path =
   staticPolicy (addBase path)
 
-routes :: ScottyM ()
-routes = do
+routes :: Connection -> ScottyM ()
+routes conn = do
   get  "/"       (content home)
   get  "/signup" (content signup)
   post "/signup" postSignup
+  get  "/:user"  (lookupBackerPage conn)
   middleware (static "public")
 
 createUserUsage :: IO ()
@@ -70,10 +94,10 @@ usage = do
   putStrLn "usage: bitsbacker <command>"
   exitFailure
 
-startServer :: IO ()
-startServer = do
+startServer :: Connection -> IO ()
+startServer conn = do
   port <- getPort
-  scotty port routes
+  scotty port (routes conn)
 
 createUserCmd :: Connection -> [Text] -> IO ()
 createUserCmd conn args = do
@@ -102,7 +126,7 @@ processArgs conn arg rest =
           createUserCmd conn args
 
       ("server", _) ->
-          startServer
+          startServer conn
 
       (_, _) ->
           usage
