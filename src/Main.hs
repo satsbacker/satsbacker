@@ -86,7 +86,7 @@ processArgs conn arg rest =
                            userName  = Username name
                          , userEmail = Email email
                          , userPermissions =
-                             Permissions (if null is_admin then 1 else 0)
+                             Permissions (if null is_admin then 0 else 1)
                          }
               userId <- insertUser conn user
               putStrLn ("created user " ++ T.unpack name
