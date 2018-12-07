@@ -1,5 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Bitsbacker.Data.User where
 
@@ -17,6 +18,8 @@ import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import Data.ByteString (ByteString)
 
+import qualified Data.Text as T
+
 newtype Email = Email { getEmail :: Text }
     deriving (Show, Eq, Ord, ToField, FromField)
 
@@ -29,15 +32,29 @@ newtype Plaintext = Plaintext { getPlaintext :: Text }
 newtype HashedPassword = HashedPassword { getHashedPassword :: ByteString }
     deriving (Show, Eq, Ord, ToField, FromField)
 
+newtype Permissions = Permissions { getPermissions :: Int }
+    deriving (Show, Eq, Ord, ToField, FromField)
+
 data User = User {
-      userName  :: Username
-    , userPass  :: HashedPassword
-    , userEmail :: Email
+      userName           :: Username
+    , userPassword       :: HashedPassword
+    , userEmail          :: Email
     , userEmailConfirmed :: Bool
+    , userPermissions    :: Permissions
     }
+
+userFields :: [Text]
+userFields = [
+    "name"
+  , "password"
+  , "email"
+  , "email_confirmed"
+  , "permissions"
+  ]
 
 instance FromRow User where
   fromRow = User <$> field
+                 <*> field
                  <*> field
                  <*> field
                  <*> field
@@ -45,37 +62,31 @@ instance FromRow User where
 instance ToRow User where
   toRow User{..} =
       toRow ( userName
-            , userPass
+            , userPassword
             , userEmail
             , userEmailConfirmed
+            , userPermissions
             )
 
--- TODO: PG
--- instance PG.FromRow User where
---   fromRow = User <$> PG.field
---                  <*> PG.field
---                  <*> PG.field
---                  <*> PG.field
+defaultPermissions :: Permissions
+defaultPermissions = Permissions 0
 
--- instance PG.ToRow User where
---   toRow User{..} =
---       PG.toRow (userName
---                ,userPass
---                ,userEmail
---                ,userEmailConfirmed
---                )
-
-createUser :: Username -> Email -> Plaintext -> IO User
-createUser name email (Plaintext password) = do
+createUser :: Plaintext -> IO User
+createUser (Plaintext password) = do
   hashedPass <- makePassword (encodeUtf8 password) 17
   return $ User {
-               userPass  = HashedPassword hashedPass
-             , userName  = name
-             , userEmail = email
-             , userEmailConfirmed = False
+               userPassword       = HashedPassword hashedPass
+             , userName           = Username ""
+             , userEmail          = Email ""
+             , userEmailConfirmed = True
+             , userPermissions    = defaultPermissions
            }
 
 insertUser :: Connection -> User -> IO Int
 insertUser conn user = do 
-    execute conn "INSERT INTO users ?" user
-    fmap fromIntegral (lastInsertRowId conn)
+  let fields = T.intercalate ", " userFields
+      qs     = map (const "?") userFields
+      qsc    = T.intercalate ", " qs
+      q = "INSERT INTO users ("<>fields<>") values ("<>qsc<>")"
+  execute conn (Query q) user
+  fmap fromIntegral (lastInsertRowId conn)

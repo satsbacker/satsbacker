@@ -28,7 +28,8 @@ migrations = [
     "CREATE TABLE users (id INTEGER PRIMARY KEY,\
      \                   password TEXT, \
      \                   email TEXT, \
-     \                   name TEXT, \
+     \                   email_confirmed INTEGER, \
+     \                   name TEXT unique, \
      \                   permissions INTEGER) "    -- 2
 
   ]
@@ -37,7 +38,7 @@ hasVersionTable :: Connection -> IO Bool
 hasVersionTable conn = do
   res <- query_ conn "SELECT name from sqlite_master WHERE type='table' and name='version'"
            :: IO [Only Text]
-  return (length res == 1)
+  return (not (null res))
 
 getDbVersion :: Connection -> IO Int
 getDbVersion conn = do

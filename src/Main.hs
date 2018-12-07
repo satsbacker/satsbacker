@@ -5,18 +5,18 @@
 module Main where
 
 import Data.Maybe (fromMaybe)
-import Database.SQLite.Simple (Connection)
-import Html
-import Lucid
-import Network.Wai.Middleware.Static (staticPolicy, addBase)
-import Network.Wai (Middleware)
-import System.Environment
-import Text.Read (readMaybe)
 import Data.Text (Text)
-import Web.Scotty
+import Database.SQLite.Simple (Connection)
+import Lucid
+import Network.Wai (Middleware)
+import Network.Wai.Middleware.Static (staticPolicy, addBase)
+import System.Environment
 import System.Exit (exitFailure, exitSuccess)
+import Text.Read (readMaybe)
+import Web.Scotty
 
 
+import Bitsbacker.Html
 import Bitsbacker.DB (migrate, openDb)
 import Bitsbacker.Data.User
 
@@ -62,7 +62,7 @@ routes = do
 
 createUserUsage :: IO ()
 createUserUsage = do
-  putStrLn "usage: bitsbacker create-user <name> <email> <password>"
+  putStrLn "usage: bitsbacker create-user <name> <email> <password> [is-admin]"
   exitFailure
 
 usage :: IO ()
@@ -80,10 +80,17 @@ processArgs conn arg rest =
     case (arg, rest) of
       ("create-user", args) ->
           case args of
-            (name:email:pass:_) -> do
-              user <- createUser (Username name) (Email email) (Plaintext pass)
+            (name:email:pass:is_admin) -> do
+              user_ <- createUser (Plaintext pass)
+              let user = user_ {
+                           userName  = Username name
+                         , userEmail = Email email
+                         , userPermissions =
+                             Permissions (if null is_admin then 1 else 0)
+                         }
               userId <- insertUser conn user
-              putStrLn ("created user " ++ T.unpack name ++ " (id:" ++ show userId ++ ")")
+              putStrLn ("created user " ++ T.unpack name
+                                        ++ " (id:" ++ show userId ++ ")")
               exitSuccess
             _ -> createUserUsage
 
@@ -93,9 +100,8 @@ processArgs conn arg rest =
       (_, _) ->
           usage
 
-main :: IO ()
-main = do
-  args <- fmap (map T.pack) getArgs
+mainWith :: [Text] -> IO ()
+mainWith args = do
   conn <- openDb
   migrate conn
 
@@ -103,3 +109,7 @@ main = do
     (x:xs) -> processArgs conn x xs
     []     -> usage
 
+main :: IO ()
+main = do
+  args <- fmap (map T.pack) getArgs
+  mainWith args
