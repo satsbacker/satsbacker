@@ -87,10 +87,12 @@ createUserCmd conn args = do
                   , userPermissions = Permissions (if isAdmin then 1 else 0)
                   }
       userId <- insertUser conn user
-      putStrLn ("created user " ++ T.unpack name
-                                ++ " (id:" ++ show userId ++ ")"
-                                ++ if isAdmin then " as admin"
-                                              else " as regular user" )
+      putStrLn ("created " ++ (if isAdmin then "admin" else "normal")
+                           ++ " user "
+                           ++ ('\'' : T.unpack name) ++ "'"
+                           ++ " <" ++ T.unpack email ++ ">"
+                           ++ " (id:" ++ show userId ++ ")"
+                           )
     _ -> createUserUsage
 
 processArgs :: Connection -> Text -> [Text] -> IO ()
