@@ -11,7 +11,7 @@ import Lucid
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Static (staticPolicy, addBase)
 import System.Environment
-import System.Exit (exitFailure, exitSuccess)
+import System.Exit (exitFailure)
 import Text.Read (readMaybe)
 import Web.Scotty
 
@@ -75,24 +75,29 @@ startServer = do
   port <- getPort
   scotty port routes
 
+createUserCmd :: Connection -> [Text] -> IO ()
+createUserCmd conn args = do
+  case args of
+    (name:email:pass:adminArg) -> do
+      user_ <- createUser (Plaintext pass)
+      let isAdmin = not (null adminArg)
+          user = user_ {
+                    userName  = Username name
+                  , userEmail = Email email
+                  , userPermissions = Permissions (if isAdmin then 1 else 0)
+                  }
+      userId <- insertUser conn user
+      putStrLn ("created user " ++ T.unpack name
+                                ++ " (id:" ++ show userId ++ ")"
+                                ++ if isAdmin then " as admin"
+                                              else " as regular user" )
+    _ -> createUserUsage
+
 processArgs :: Connection -> Text -> [Text] -> IO ()
 processArgs conn arg rest =
     case (arg, rest) of
       ("create-user", args) ->
-          case args of
-            (name:email:pass:is_admin) -> do
-              user_ <- createUser (Plaintext pass)
-              let user = user_ {
-                           userName  = Username name
-                         , userEmail = Email email
-                         , userPermissions =
-                             Permissions (if null is_admin then 0 else 1)
-                         }
-              userId <- insertUser conn user
-              putStrLn ("created user " ++ T.unpack name
-                                        ++ " (id:" ++ show userId ++ ")")
-              exitSuccess
-            _ -> createUserUsage
+          createUserCmd conn args
 
       ("server", _) ->
           startServer
