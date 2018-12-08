@@ -4,3 +4,5 @@
 /archive/
 /.migrations
 /bitsbacker.db
+*.dyn_hi
+*.dyn_o
