@@ -34,7 +34,6 @@ sockRequest SocketConfig{..} bs = liftIO $ timeout tout $ do
     readAll soc = fmap (Lazy.fromChunks . DL.toList) (readChunks soc DL.empty)
     readChunks soc chunks =
       do chunk <- recv soc 128
-         let cs = DL.snoc chunks chunk
-         if BS.length chunk < 128
-           then return cs
-           else readChunks soc cs
+         if BS.null chunk
+           then return chunks
+           else readChunks soc (DL.snoc chunks chunk)

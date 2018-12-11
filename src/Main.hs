@@ -5,8 +5,12 @@
 
 module Main where
 
+import Data.Word (Word64)
 import Data.Maybe (fromMaybe)
+import Data.Aeson (Value)
 import Data.Text (Text)
+import Control.Applicative (optional)
+import Control.Monad.IO.Class (liftIO)
 import Database.SQLite.Simple (Connection)
 import Lucid
 import Network.Wai (Middleware)
@@ -16,13 +20,31 @@ import System.Exit (exitFailure)
 import Text.Read (readMaybe)
 import Web.Scotty
 
+import Network.RPC (rpc)
+import Network.RPC.CLightning
+import Network.RPC.Config (SocketConfig(..))
 
+import Bitcoin.Denomination (msats)
+
+import Bitsbacker.InvoiceId (newInvoiceId, encodeInvoiceId)
 import Bitsbacker.Html
 import Bitsbacker.Html.User
 import Bitsbacker.DB (migrate, openDb)
 import Bitsbacker.Data.User
 
 import qualified Data.Text as T
+import qualified Data.ByteString.Char8 as B8
+
+getSocketConfig :: IO SocketConfig
+getSocketConfig = do
+  path <- getRPCSocket
+  return (SocketConfig path Nothing)
+
+getRPCSocket :: IO FilePath
+getRPCSocket = do
+  mstrsocket <- lookupEnv "RPCSOCK"
+  return (fromMaybe "/home/jb55/.lightning-bitcoin/lightning-rpc" mstrsocket)
+
 
 getPort :: IO Int
 getPort = do
@@ -52,12 +74,25 @@ static :: String -> Network.Wai.Middleware
 static path =
   staticPolicy (addBase path)
 
-routes :: Connection -> ScottyM ()
-routes conn = do
-  get  "/"       (content home)
-  get  "/signup" (content signup)
-  post "/signup" postSignup
-  get  "/:user"  (lookupUserPage conn)
+rpcInvoice :: SocketConfig -> IO Value
+rpcInvoice cfg = do
+  invoiceId <- liftIO newInvoiceId
+  let encoded = encodeInvoiceId invoiceId
+      args    = ["1000", B8.unpack encoded, "description"]
+
+getInvoice :: Connection -> SocketConfig -> ActionM ()
+getInvoice db rpc = do
+  msatoshis <- msats <$> (param "msatoshi" :: ActionM Word64)
+  content (toHtml (show msatoshis))
+
+
+routes :: Connection -> SocketConfig -> ScottyM ()
+routes conn rpc = do
+  get  "/"        (content home)
+  get  "/signup"  (content signup)
+  post "/signup"  postSignup
+  get  "/invoice" (getInvoice conn rpc)
+  get  "/:user"   (lookupUserPage conn)
   middleware (static "public")
 
 createUserUsage :: IO ()
@@ -78,7 +113,8 @@ usage = do
 startServer :: Connection -> IO ()
 startServer conn = do
   port <- getPort
-  scotty port (routes conn)
+  rpc  <- getSocketConfig
+  scotty port (routes conn rpc)
 
 createUserCmd :: Connection -> [Text] -> IO ()
 createUserCmd conn args = do
@@ -120,7 +156,6 @@ mainWith args = do
   case args of
     (x:xs) -> processArgs conn x xs
     []     -> usage
-
 main :: IO ()
 main = do
   args <- fmap (map T.pack) getArgs

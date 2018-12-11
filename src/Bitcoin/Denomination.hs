@@ -8,6 +8,7 @@ module Bitcoin.Denomination
     , bits, msats, sats, toBits
     ) where
 
+import Data.Word (Word64)
 import Data.Aeson
 import Text.Printf
 
@@ -16,7 +17,7 @@ class Denomination a where
   -- fromMsats :: Int -> a
   -- numMsats :: Int
 
-newtype MSats = MSats { getMsats :: Int }
+newtype MSats = MSats { getMsats :: Word64 }
   deriving (FromJSON, ToJSON, Num, Ord, Eq)
 
 newtype Sats = Sats { getSats :: Rational }
@@ -52,7 +53,7 @@ instance Denomination Sats where
 bits :: Rational -> Bits
 bits = Bits
 
-msats :: Int -> MSats
+msats :: Word64 -> MSats
 msats = MSats
 
 sats :: Rational -> Sats
