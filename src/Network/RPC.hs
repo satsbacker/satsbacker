@@ -30,12 +30,11 @@ rpc :: (MonadIO m, ToJSON params, FromJSON resp)
 rpc cfg method params = do
   let req = encode (makeRequest method params)
   mres <- sockRequest cfg (toStrict req)
-  liftIO (print mres)
   case mres of
     Right res ->
       either (fail . show . jsonDecodeError . B8.pack)
              (return . getCRPCResp)
-             (eitherDecode res)
+             (eitherDecode' res)
     Left e -> fail (show e)
 
 

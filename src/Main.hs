@@ -79,11 +79,14 @@ rpcInvoice cfg = do
   invoiceId <- liftIO newInvoiceId
   let encoded = encodeInvoiceId invoiceId
       args    = ["1000", B8.unpack encoded, "description"]
+  print args
+  rpc cfg "invoice" args
 
 getInvoice :: Connection -> SocketConfig -> ActionM ()
 getInvoice db rpc = do
   msatoshis <- msats <$> (param "msatoshi" :: ActionM Word64)
   content (toHtml (show msatoshis))
+
 
 
 routes :: Connection -> SocketConfig -> ScottyM ()
