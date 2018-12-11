@@ -5,19 +5,20 @@ module Bitcoin.Denomination
     , MSats(..)
     , Sats(..)
     , Bits(..)
-    , bits, msats, sats, toBits
+    , Btc(..)
+    , bits, msats, sats, toBits, btc, toSats, toBtc
     ) where
 
-import Data.Word (Word64)
 import Data.Aeson
+import Data.Int (Int64)
 import Text.Printf
 
 class Denomination a where
-  toMsats :: a -> Rational
+  toMsats :: a -> MSats
   -- fromMsats :: Int -> a
   -- numMsats :: Int
 
-newtype MSats = MSats { getMsats :: Word64 }
+newtype MSats = MSats { getMsats :: Int64 }
   deriving (FromJSON, ToJSON, Num, Ord, Eq)
 
 newtype Sats = Sats { getSats :: Rational }
@@ -30,7 +31,7 @@ newtype Btc = Btc { getBtc :: Rational }
   deriving (FromJSON, ToJSON, Num, Ord, Eq)
 
 instance Denomination MSats where
-  toMsats (MSats msats_) = toRational msats_
+  toMsats a = a
 
 bitsSize :: Num a => a
 bitsSize = 100000
@@ -42,18 +43,18 @@ btcSize :: Num a => a
 btcSize = 100000000000
 
 instance Denomination Bits where
-  toMsats (Bits bitz) = bitz * bitsSize
+  toMsats (Bits bitz) = msats (round (bitz * bitsSize))
 
 instance Denomination Btc where
-  toMsats (Btc btc_) = btc_ * btcSize
+  toMsats (Btc btc_) = msats (round (btc_ * btcSize))
 
 instance Denomination Sats where
-  toMsats (Sats sats_) = sats_ * 1000
+  toMsats (Sats sats_) = msats (round (sats_ * 1000))
 
 bits :: Rational -> Bits
 bits = Bits
 
-msats :: Word64 -> MSats
+msats :: Int64 -> MSats
 msats = MSats
 
 sats :: Rational -> Sats
@@ -63,13 +64,13 @@ btc :: Rational -> Btc
 btc = Btc
 
 toBits :: Denomination a => a -> Bits
-toBits = Bits . (/ bitsSize) . toRational . toMsats
+toBits = Bits . (/ bitsSize) . toRational . getMsats . toMsats
 
 toSats :: Denomination a => a -> Sats
-toSats = Sats . (/ satsSize) . toRational . toMsats
+toSats = Sats . (/ satsSize) . toRational . getMsats . toMsats
 
 toBtc :: Denomination a => a -> Btc
-toBtc = Btc . (/ btcSize) . toRational . toMsats
+toBtc = Btc . (/ btcSize) . toRational . getMsats . toMsats
 
 instance Show MSats where
   show (MSats units) = printf "%d msats" units
