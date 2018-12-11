@@ -1,0 +1,35 @@
+#+TITLE:    Bitsbacker
+#+AUTHOR:   William Casarin
+#+OPTIONS:   H:4 num:2 toc:t
+#+STARTUP:   lognoteclock-out
+#+SETUPFILE: styles/readtheorg.setup
+#+FILETAGS: bitsbacker
+
+#+BEGIN: clocktable :maxlevel 1 :scope file
+#+CAPTION: Clock summary at [2018-12-09 Sun 17:01]
+| Headline     | Time   |
+|--------------+--------|
+| *Total time* | *0:00* |
+#+END:
+
+
+* Todos
+
+** TODO Quick test donate button
+** TODO Show number of backers
+** TODO Show bits per month
+  
+** TODO Allow users to "subscribe", become a "bits backer"
+** TODO Paywalled individual post
+** TODO Public and backer posts
+
+** TODO Mailing list
+** TODO Mailing list preferences
+
+** TODO Streak highscore board
+** TODO Leads
+If you become a backer, you immediately get access to N backer-only posts
+** TODO Goals - bits per month
+** TODO Tiers
+Pledge 100 bits more more per month, etc
+
