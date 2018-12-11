@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -6,15 +7,19 @@ module Network.Lightning.Bolt11
     , bolt11Msats
     ) where
 
-import Bitcoin.Bech32 (bech32Decode, toBase256)
+import Bitcoin.Bech32 (bech32Decode, toBase256, Word5(..))
 import Bitcoin.Denomination (btc, MSats, Denomination(toMsats))
 
 import Control.Applicative
 import Data.Text (Text)
+import Data.Bits ((.|.), shiftL)
+import Data.Foldable (foldl')
+import Data.Word (Word8)
 import Data.Attoparsec.Text
 import Data.ByteString (ByteString)
 
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as B8
 -- import qualified Crypto.Secp256k1 as Secp
 
 data Multiplier = Milli | Micro | Nano | Pico
@@ -32,10 +37,11 @@ data Bolt11HRP = Bolt11HRP {
     deriving (Show)
 
 data Bolt11 = Bolt11 {
-      bolt11HRP       :: Bolt11HRP 
+      bolt11HRP       :: Bolt11HRP
     , bolt11Timestamp :: Int -- posix
     , bolt11Signature :: ByteString
     }
+    deriving (Show)
 
 -- instance FromJSON Bolt11 where
 --     parseJSON (String txt) = maybe (fail "could not decode bolt11") return
@@ -49,17 +55,17 @@ parseCurrency :: Parser Currency
 parseCurrency =
       (string "bc"   *> pure Bitcoin)
   <|> (string "tb"   *> pure BitcoinTestnet)
-  <|> (string "bcrt" *> pure BitcoinRegtest) 
+  <|> (string "bcrt" *> pure BitcoinRegtest)
 
 parseMultiplier :: Parser Multiplier
 parseMultiplier = do
-    c <- satisfy (`elem` ("munp" :: String))
-    case c of
-      'm' -> pure Milli
-      'u' -> pure Micro
-      'n' -> pure Nano
-      'p' -> pure Pico
-      _   -> error "impossible"
+  c <- satisfy (`elem` ("munp" :: String))
+  case c of
+    'm' -> pure Milli
+    'u' -> pure Micro
+    'n' -> pure Nano
+    'p' -> pure Pico
+    _   -> fail "unhandled case in parseMultiplier"
 
 parseHrpAmount :: Parser (Int, Multiplier)
 parseHrpAmount = do
@@ -75,15 +81,24 @@ hrpParser = do
   mamt     <- optional parseHrpAmount
   return (Bolt11HRP currency mamt)
 
-decodeBolt11 :: Text -> Either String Bolt11HRP
-decodeBolt11 txt =
-  let mhrp = do (hrp, w5s) <- bech32Decode txt
-                return hrp
-                -- bytes      <- BS.pack <$> toBase256 w5s
-  in
-    case mhrp of
-      Nothing   -> Left "no hrp found in bolt11"
-      Just hrp -> parseOnly hrpParser hrp
+maybeToRight :: b -> Maybe a -> Either b a
+maybeToRight _ (Just x) = Right x
+maybeToRight y Nothing  = Left y
+
+w5int :: [Word5] -> Int
+w5int bytes = foldl' decodeInt 0 (zip [0..] (Prelude.take 7 bytes))
+  where
+    decodeInt !n (i, UnsafeWord5 byte) = n .|. fromIntegral byte `shiftL` (i * 5)
+
+decodeBolt11 :: Text -> Either String Bolt11
+decodeBolt11 txt = do
+  (hrp, w5s) <- maybeToRight "error decoding bech32" (bech32Decode txt)
+  let (timestampBits, rest) = splitAt 7 w5s
+      timestamp = w5int (reverse timestampBits)
+      sig       = toBase256 rest
+  parsedHrp <- parseOnly hrpParser hrp
+  Right (Bolt11 parsedHrp timestamp (B8.pack sig))
+     -- bytes      <- BS.pack <$> toBase256 w5s
 
 
 multiplierRatio :: Multiplier -> Rational
@@ -98,4 +113,3 @@ bolt11Msats :: Bolt11HRP -> Maybe MSats
 bolt11Msats  Bolt11HRP{..} = do
   (amt, multi) <- bolt11Amount
   return (toMsats (btc (multiplierRatio multi * toRational amt)))
-

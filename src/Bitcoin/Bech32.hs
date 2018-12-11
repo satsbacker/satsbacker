@@ -50,6 +50,9 @@ newtype Word5 =
     UnsafeWord5 Word8
     deriving (Eq, Ord)
 
+instance Show Word5 where
+    show (UnsafeWord5 w8) = show w8
+
 instance Ix Word5 where
     range (UnsafeWord5 m, UnsafeWord5 n) = map UnsafeWord5 $ range (m, n)
     index (UnsafeWord5 m, UnsafeWord5 n) (UnsafeWord5 i) = index (m, n) i
