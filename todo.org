@@ -6,7 +6,7 @@
 #+FILETAGS: bitsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2018-12-09 Sun 17:01]
+#+CAPTION: Clock summary at [2018-12-11 Tue 15:54]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
@@ -15,7 +15,11 @@
 
 * Todos
 
+** TODO Finish Bolt11 decoding
+** TODO Insert invoice into DB
+
 ** TODO Quick test donate button
+
 ** TODO Show number of backers
 ** TODO Show bits per month
   

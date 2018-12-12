@@ -10,6 +10,7 @@ module Bitcoin.Bech32
     , bech32Decode
     , toBase32
     , toBase256
+    , toBase256'
     , segwitEncode
     , segwitDecode
     , Word5(..)
@@ -195,6 +196,11 @@ toBase32 dat =
 toBase256 :: [Word5] -> Maybe [Word8]
 toBase256 dat =
     map fromIntegral <$> convertBits (map fromWord5 dat) 5 8 noPadding
+
+toBase256' :: [Word5] -> [Word8]
+toBase256' dat =
+    map fromIntegral $ runIdentity $ convertBits (map fromWord5 dat) 5 8 yesPadding
+
 
 -- | Check if witness version and program are valid.
 segwitCheck :: Word8 -> Data -> Bool

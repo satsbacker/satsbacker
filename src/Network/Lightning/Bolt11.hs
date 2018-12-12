@@ -7,20 +7,50 @@ module Network.Lightning.Bolt11
     , bolt11Msats
     ) where
 
-import Bitcoin.Bech32 (bech32Decode, toBase256, Word5(..))
+import Bitcoin.Bech32 (bech32Decode, toBase256, toBase256', Word5(..))
 import Bitcoin.Denomination (btc, MSats, Denomination(toMsats))
 
 import Control.Applicative
 import Data.Text (Text)
+import Data.Text.Encoding (decodeUtf8)
 import Data.Bits ((.|.), shiftL)
 import Data.Foldable (foldl')
-import Data.Word (Word8)
 import Data.Attoparsec.Text
 import Data.ByteString (ByteString)
+import Numeric (showHex)
 
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Char8 as B8
+import qualified Data.ByteString.Lazy.Char8 as BL
 -- import qualified Crypto.Secp256k1 as Secp
+
+newtype Hex = Hex { getHex :: ByteString }
+    deriving (Eq, Ord)
+
+instance Show Hex where
+    show (Hex bs) = BL.unpack (BS.toLazyByteString (BS.byteStringHex bs))
+
+data Tag =
+     PaymentHash Hex
+   | Description Text
+   | PayeePubkey Hex
+   | DescriptionHash Hex
+   | Expiry Int
+   | MinFinalCltvExpiry Int
+   | OnchainFallback Hex -- TODO: address type
+   | ExtraRouteInfo
+   deriving (Show, Eq)
+
+tagToId :: Tag -> Int
+tagToId PaymentHash{}        = 1
+tagToId Description{}        = 13
+tagToId PayeePubkey{}        = 19
+tagToId DescriptionHash{}    = 23
+tagToId Expiry{}             = 6
+tagToId MinFinalCltvExpiry{} = 24
+tagToId OnchainFallback{}    = 9
+tagToId ExtraRouteInfo{}     = 3
 
 data Multiplier = Milli | Micro | Nano | Pico
                 deriving (Show, Eq, Ord)
@@ -30,16 +60,23 @@ data Currency = Bitcoin
               | BitcoinRegtest
               deriving (Show, Eq)
 
+newtype Bolt11Amount = Bolt11Amount { getBolt11Amount :: (Int, Multiplier) }
+    deriving (Eq, Ord)
+
+instance Show Bolt11Amount where
+    show amt = show (bolt11Msats amt)
+
 data Bolt11HRP = Bolt11HRP {
       bolt11Currency    :: Currency
-    , bolt11Amount      :: Maybe (Int, Multiplier)
+    , bolt11Amount      :: Maybe Bolt11Amount
     }
     deriving (Show)
 
 data Bolt11 = Bolt11 {
       bolt11HRP       :: Bolt11HRP
     , bolt11Timestamp :: Int -- posix
-    , bolt11Signature :: ByteString
+    , bolt11Tags      :: [Tag] -- posix
+    , bolt11Signature :: Hex
     }
     deriving (Show)
 
@@ -67,11 +104,11 @@ parseMultiplier = do
     'p' -> pure Pico
     _   -> fail "unhandled case in parseMultiplier"
 
-parseHrpAmount :: Parser (Int, Multiplier)
+parseHrpAmount :: Parser Bolt11Amount
 parseHrpAmount = do
   amt   <- decimal
   multi <- parseMultiplier
-  return (amt, multi)
+  return (Bolt11Amount (amt, multi))
 
 hrpParser :: Parser Bolt11HRP
 hrpParser = do
@@ -86,19 +123,73 @@ maybeToRight _ (Just x) = Right x
 maybeToRight y Nothing  = Left y
 
 w5int :: [Word5] -> Int
-w5int bytes = foldl' decodeInt 0 (zip [0..] (Prelude.take 7 bytes))
+w5int bytes = foldl' decodeInt 0 (zip [0..] (Prelude.take 7 (reverse bytes)))
   where
-    decodeInt !n (i, UnsafeWord5 byte) = n .|. fromIntegral byte `shiftL` (i * 5)
+    decodeInt !n (i, UnsafeWord5 byte) =
+        n .|. fromIntegral byte `shiftL` (i * 5)
+
+w5bs :: [Word5] -> ByteString
+w5bs = BS.pack . toBase256'
+
+w5txt :: [Word5] -> Text
+w5txt = decodeUtf8 . w5bs
+
+tagParser :: [Word5] -> (Maybe Tag, [Word5])
+tagParser []   = (Nothing, [])
+tagParser words
+  | length words < 8 = (Nothing, words)
+tagParser all@(UnsafeWord5 typ:d1:d2:rest)
+  | length rest < 7 = (Nothing, all)
+  | otherwise = (Just tag, leftovers)
+  where
+    dataLen           = w5int [d1,d2]
+    (dat', leftovers) = Prelude.splitAt dataLen rest
+    dat               = init dat'
+    datBs             = Hex (w5bs dat)
+    tag =
+      case typ of
+        1  -> PaymentHash datBs
+        23 -> DescriptionHash  datBs-- (w5bs dat)
+        13 -> Description (w5txt dat)
+        19 -> PayeePubkey datBs
+        6  -> Expiry (w5int dat)
+        24 -> MinFinalCltvExpiry (w5int dat)
+        9  -> OnchainFallback datBs
+        3  -> ExtraRouteInfo
+        n  -> error ("unhandled typ " ++ show n)
+
+
+-- tagToId ExtraRouteInfo{}     = 3
+
+
+data MSig = Sig [Word5]
+          | Unk [Word5]
+
+tagsParser :: [Word5] -> ([Tag], MSig)
+tagsParser words
+  | length words == 104 = ([], Sig words)
+  | otherwise =
+      let
+          (mtag, rest)   = tagParser words
+          first fn (a,b) = (fn a, b)
+      in
+        maybe ([], Unk rest)
+              (\tag -> first (tag:) (tagsParser rest)) mtag
+
+
+
 
 decodeBolt11 :: Text -> Either String Bolt11
 decodeBolt11 txt = do
   (hrp, w5s) <- maybeToRight "error decoding bech32" (bech32Decode txt)
   let (timestampBits, rest) = splitAt 7 w5s
-      timestamp = w5int (reverse timestampBits)
-      sig       = toBase256 rest
+      timestamp             = w5int timestampBits
+      (tags, leftover)      = tagsParser rest
+  sig <- case leftover of
+           Sig words -> maybe (Left "corrupt") Right (toBase256 (init words))
+           Unk left  -> Left ("corrupt, leftover: " ++ show (Hex (w5bs (init left)) ))
   parsedHrp <- parseOnly hrpParser hrp
-  Right (Bolt11 parsedHrp timestamp (B8.pack sig))
-     -- bytes      <- BS.pack <$> toBase256 w5s
+  Right (Bolt11 parsedHrp timestamp tags (Hex (BS.pack sig)))
 
 
 multiplierRatio :: Multiplier -> Rational
@@ -109,7 +200,6 @@ multiplierRatio m =
       Nano  -> 1 / 1000000000
       Pico  -> 1 / 1000000000000
 
-bolt11Msats :: Bolt11HRP -> Maybe MSats
-bolt11Msats  Bolt11HRP{..} = do
-  (amt, multi) <- bolt11Amount
-  return (toMsats (btc (multiplierRatio multi * toRational amt)))
+bolt11Msats :: Bolt11Amount -> MSats
+bolt11Msats  (Bolt11Amount (amt, multi)) =
+  toMsats (btc (multiplierRatio multi * toRational amt))
