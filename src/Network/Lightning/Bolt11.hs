@@ -5,6 +5,12 @@
 module Network.Lightning.Bolt11
     ( Bolt11(..)
     , bolt11Msats
+    , decodeBolt11
+    , Hex(..)
+    , Multiplier(..)
+    , Currency(..)
+    , Tag(..)
+    , Bolt11HRP(..)
     ) where
 
 import Bitcoin.Bech32 (bech32Decode, toBase256, toBase256', Word5(..))
@@ -20,6 +26,7 @@ import Data.ByteString (ByteString)
 import Numeric (showHex)
 
 import qualified Data.ByteString as BS
+import qualified Data.Text as T
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -132,7 +139,7 @@ w5bs :: [Word5] -> ByteString
 w5bs = BS.pack . toBase256'
 
 w5txt :: [Word5] -> Text
-w5txt = decodeUtf8 . w5bs
+w5txt = T.init . decodeUtf8 . w5bs
 
 tagParser :: [Word5] -> (Maybe Tag, [Word5])
 tagParser []   = (Nothing, [])
@@ -143,8 +150,7 @@ tagParser all@(UnsafeWord5 typ:d1:d2:rest)
   | otherwise = (Just tag, leftovers)
   where
     dataLen           = w5int [d1,d2]
-    (dat', leftovers) = Prelude.splitAt dataLen rest
-    dat               = init dat'
+    (dat, leftovers) = Prelude.splitAt dataLen rest
     datBs             = Hex (w5bs dat)
     tag =
       case typ of

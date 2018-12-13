@@ -20,8 +20,11 @@ import System.Exit (exitFailure)
 import Text.Read (readMaybe)
 import Web.Scotty
 
+import Network.Lightning.Bolt11 (decodeBolt11)
+
 import Network.RPC (rpc)
 import Network.RPC.CLightning
+import Network.RPC.CLightning.Invoice
 import Network.RPC.Config (SocketConfig(..))
 
 import Bitcoin.Denomination (msats)
@@ -43,7 +46,7 @@ getSocketConfig = do
 getRPCSocket :: IO FilePath
 getRPCSocket = do
   mstrsocket <- lookupEnv "RPCSOCK"
-  return (fromMaybe "/home/jb55/.lightning-bitcoin/lightning-rpc" mstrsocket)
+  return (fromMaybe "/home/jb55/.lightning-bitcoin-rpc" mstrsocket)
 
 
 getPort :: IO Int
@@ -74,12 +77,11 @@ static :: String -> Network.Wai.Middleware
 static path =
   staticPolicy (addBase path)
 
-rpcInvoice :: SocketConfig -> IO Value
+rpcInvoice :: SocketConfig -> IO Invoice
 rpcInvoice cfg = do
   invoiceId <- liftIO newInvoiceId
   let encoded = encodeInvoiceId invoiceId
       args    = ["1000", B8.unpack encoded, "description"]
-  print args
   rpc cfg "invoice" args
 
 getInvoice :: Connection -> SocketConfig -> ActionM ()
