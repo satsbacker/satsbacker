@@ -11,6 +11,8 @@ module Network.Lightning.Bolt11
     , Currency(..)
     , Tag(..)
     , Bolt11HRP(..)
+    , isPaymentHash
+    , isDescription
     ) where
 
 import Bitcoin.Bech32 (bech32Decode, toBase256, toBase256', Word5(..))
@@ -18,6 +20,7 @@ import Bitcoin.Denomination (btc, MSats, Denomination(toMsats))
 
 import Control.Applicative
 import Data.Text (Text)
+import Data.Maybe (fromMaybe)
 import Data.Text.Encoding (decodeUtf8)
 import Data.Bits ((.|.), shiftL)
 import Data.Foldable (foldl')
@@ -58,6 +61,14 @@ tagToId Expiry{}             = 6
 tagToId MinFinalCltvExpiry{} = 24
 tagToId OnchainFallback{}    = 9
 tagToId ExtraRouteInfo{}     = 3
+
+isPaymentHash :: Tag -> Bool
+isPaymentHash PaymentHash{} = True
+isPaymentHash _ = False
+
+isDescription :: Tag -> Bool
+isDescription Description{} = True
+isDescription _ = False
 
 data Multiplier = Milli | Micro | Nano | Pico
                 deriving (Show, Eq, Ord)
@@ -136,10 +147,10 @@ w5int bytes = foldl' decodeInt 0 (zip [0..] (Prelude.take 7 (reverse bytes)))
         n .|. fromIntegral byte `shiftL` (i * 5)
 
 w5bs :: [Word5] -> ByteString
-w5bs = BS.pack . toBase256'
+w5bs = BS.pack . fromMaybe (error "what") . toBase256
 
 w5txt :: [Word5] -> Text
-w5txt = T.init . decodeUtf8 . w5bs
+w5txt = decodeUtf8 . w5bs
 
 tagParser :: [Word5] -> (Maybe Tag, [Word5])
 tagParser []   = (Nothing, [])
@@ -192,8 +203,8 @@ decodeBolt11 txt = do
       timestamp             = w5int timestampBits
       (tags, leftover)      = tagsParser rest
   sig <- case leftover of
-           Sig words -> maybe (Left "corrupt") Right (toBase256 (init words))
-           Unk left  -> Left ("corrupt, leftover: " ++ show (Hex (w5bs (init left)) ))
+           Sig words -> maybe (Left "corrupt") Right (toBase256 words)
+           Unk left  -> Left ("corrupt, leftover: " ++ show (Hex (w5bs left) ))
   parsedHrp <- parseOnly hrpParser hrp
   Right (Bolt11 parsedHrp timestamp tags (Hex (BS.pack sig)))
 

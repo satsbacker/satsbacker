@@ -5,12 +5,10 @@
 
 module Main where
 
-import Data.Int (Int64)
-import Data.Maybe (fromMaybe)
-import Data.Aeson (Value)
-import Data.Text (Text)
-import Control.Applicative (optional)
 import Control.Monad.IO.Class (liftIO)
+import Data.Aeson (Value)
+import Data.Maybe (fromMaybe)
+import Data.Text (Text)
 import Database.SQLite.Simple (Connection)
 import Lucid
 import Network.Wai (Middleware)
@@ -29,7 +27,8 @@ import Network.RPC.Config (SocketConfig(..))
 
 import Bitcoin.Denomination (msats)
 
-import Bitsbacker.InvoiceId (newInvoiceId, encodeInvoiceId)
+import Invoicing (invoiceRoutes)
+import Bitsbacker.UniqueId (newUniqueId, encodeUniqueId)
 import Bitsbacker.Html
 import Bitsbacker.Html.User
 import Bitsbacker.DB (migrate, openDb)
@@ -77,26 +76,13 @@ static :: String -> Network.Wai.Middleware
 static path =
   staticPolicy (addBase path)
 
-rpcInvoice :: SocketConfig -> IO Invoice
-rpcInvoice cfg = do
-  invoiceId <- liftIO newInvoiceId
-  let encoded = encodeInvoiceId invoiceId
-      args    = ["1000", B8.unpack encoded, "description"]
-  rpc cfg "invoice" args
-
-getInvoice :: Connection -> SocketConfig -> ActionM ()
-getInvoice db rpc = do
-  msatoshis <- msats <$> (param "msatoshi" :: ActionM Int64)
-  content (toHtml (show msatoshis))
-
-
 routes :: Connection -> SocketConfig -> ScottyM ()
 routes conn rpc = do
   get  "/"        (content home)
   get  "/signup"  (content signup)
   post "/signup"  postSignup
-  get  "/invoice" (getInvoice conn rpc)
   get  "/:user"   (lookupUserPage conn)
+  invoiceRoutes conn rpc
   middleware (static "public")
 
 createUserUsage :: IO ()
@@ -151,6 +137,8 @@ processArgs conn arg rest =
 
       (_, _) ->
           usage
+
+server = mainWith ["server"]
 
 mainWith :: [Text] -> IO ()
 mainWith args = do
