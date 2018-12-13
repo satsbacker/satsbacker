@@ -5,7 +5,7 @@
 
 module Main where
 
-import Data.Word (Word64)
+import Data.Int (Int64)
 import Data.Maybe (fromMaybe)
 import Data.Aeson (Value)
 import Data.Text (Text)
@@ -84,9 +84,8 @@ rpcInvoice cfg = do
 
 getInvoice :: Connection -> SocketConfig -> ActionM ()
 getInvoice db rpc = do
-  msatoshis <- msats <$> (param "msatoshi" :: ActionM Word64)
+  msatoshis <- msats <$> (param "msatoshi" :: ActionM Int64)
   content (toHtml (show msatoshis))
-
 
 
 routes :: Connection -> SocketConfig -> ScottyM ()
