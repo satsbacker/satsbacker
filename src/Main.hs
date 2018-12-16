@@ -9,7 +9,7 @@ import Data.Text (Text)
 import System.Environment (getArgs)
 
 import Bitsbacker.Cli
-import Bitsbacker.DB (migrate, openDb)
+import Bitsbacker.Config
 
 import qualified Data.Text as T
 
@@ -22,9 +22,8 @@ main = do
 
 mainWith :: [Text] -> IO ()
 mainWith args = do
-  conn <- openDb
-  migrate conn
+  cfg <- getConfig
 
   case args of
-    (x:xs) -> processArgs conn x xs
+    (x:xs) -> processArgs cfg x xs
     []     -> usage

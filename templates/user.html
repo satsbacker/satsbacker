@@ -1,8 +1,12 @@
 <!DOCTYPE html>
+<html>
+<head>
 {{>head}}
+    {{#user}}
+    <title>{{ name }} is making their backer page | bitsbacker</title>
+</head>
 <body>
     <div class="hero">
-        {{#user}}
         <h1>
             <p><b>{{name}}</b> is {{making}}</p>
         </h1>
@@ -15,7 +19,6 @@
         {{/stats}}
     </div>
     <div class="container">
-        {{> body}}
         <h2>About</h2>
         <h2>Goals</h2>
         <ul>

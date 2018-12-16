@@ -5,12 +5,13 @@ import Data.Maybe (fromMaybe)
 import System.Environment (lookupEnv)
 import Database.SQLite.Simple (Connection)
 import Network.RPC.Config (SocketConfig(..))
+import Control.Concurrent.MVar (MVar, newMVar)
 
 import Bitsbacker.DB
 
 data Config = Config {
-      cfgConn :: Connection
-    , cfgRPC  :: SocketConfig
+      cfgConn :: MVar Connection
+    , cfgRPC  :: MVar SocketConfig
     }
 
 getConfig :: IO Config
@@ -18,7 +19,9 @@ getConfig = do
   socketCfg <- getSocketConfig
   conn <- openDb
   migrate conn
-  return (Config conn socketCfg)
+  mvconn <- newMVar conn
+  mvsocket <- newMVar socketCfg
+  return (Config mvconn mvsocket)
 
 
 getSocketConfig :: IO SocketConfig

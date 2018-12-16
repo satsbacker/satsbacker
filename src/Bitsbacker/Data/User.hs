@@ -4,13 +4,15 @@
 
 module Bitsbacker.Data.User where
 
-import Data.Maybe (listToMaybe)
+import Control.Concurrent (MVar, withMVar)
 import Crypto.PasswordStore (makePassword)
-import Data.ByteString (ByteString)
-import Data.Text (Text)
-import Data.Int (Int64)
 import Data.Aeson
+import Data.ByteString (ByteString)
+import Data.Int (Int64)
+import Data.Maybe (listToMaybe)
+import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
+
 import Database.SQLite.Simple
 import Database.SQLite.Simple.FromField
 import Database.SQLite.Simple.ToField
@@ -125,13 +127,20 @@ insertUser conn user = do
   execute conn (Query q) user
   fmap fromIntegral (lastInsertRowId conn)
 
-getUser :: Connection -> Username -> IO (Maybe User)
-getUser conn user = do
+
+getUser :: MVar Connection -> Username -> IO (Maybe (UserId, User))
+getUser mvconn username = do
   let fields = T.intercalate ", " userFields
       q = "SELECT "<>fields<>" FROM users WHERE name = ? LIMIT 1"
-  users <- query conn (Query q) (Only user)
-  return (listToMaybe users)
+  withMVar mvconn $ \conn -> withTransaction conn $ do
+    muser <- query conn (Query q) (Only username)
+    case listToMaybe muser of
+      Nothing   -> return Nothing
+      Just user_ ->
+          do userId <- lastInsertRowId conn
+             return (Just (UserId userId, user_))
 
--- getUserStats :: Connection -> UserId -> IO UserStats
--- getUserStats conn userId = do
---   let q = 
+
+getUserStats :: MVar Connection -> UserId -> IO UserStats
+getUserStats _conn _userId = do
+  return (UserStats 100 1000)

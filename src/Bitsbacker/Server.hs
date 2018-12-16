@@ -5,23 +5,20 @@ module Bitsbacker.Server where
 import Database.SQLite.Simple (Connection)
 import Lucid
 import Control.Monad.IO.Class (liftIO)
-import Network.RPC.Config (SocketConfig(..))
+import Control.Concurrent (MVar)
 import Network.Wai (Middleware)
 import System.Environment (lookupEnv)
 import Network.Wai.Middleware.Static (staticPolicy, addBase)
 import Web.Scotty
-import Data.List
 import Data.Maybe (fromMaybe)
 import Text.Read (readMaybe)
 import Text.Mustache
 import Data.Aeson
-import qualified Data.Text as T
 
 import Invoicing
 import Bitsbacker.Templates
-import Bitsbacker.DB
 import Bitsbacker.Config
-import Bitsbacker.Data.User (getUser, Username(..))
+import Bitsbacker.Data.User
 import Bitsbacker.Html
 
 home :: Html ()
@@ -43,31 +40,36 @@ signup = do
       textInput "name"
       textInput "email"
 
-
-getTemplate :: [BBTemplate] -> TemplateType -> Template
+getTemplate :: Template -> TemplateType -> Template
 getTemplate templates typ =
-  let
-      mtemplate = find ((==typ) . bbTemplateType) templates
-      err = T.unpack (unPName (templateName typ)) ++ " template not loaded"
-  in
-      maybe (error err) bbTemplate mtemplate
+    templates { templateActual = templateName typ }
+
+-- getTemplate :: [BBTemplate] -> TemplateType -> Template
+-- getTemplate templates typ =
+--   let
+--       mtemplate = find ((==typ) . bbTemplateType) templates
+--       err = T.unpack (unPName (templateName typ)) ++ " template not loaded"
+--   in
+--       maybe (error err) bbTemplate mtemplate
 
 -- getUserPage :: User -> UserPage
 -- getUserPage user = do
 
 
-lookupUserPage :: Connection -> Template -> ActionM ()
-lookupUserPage conn templ = do
+lookupUserPage :: MVar Connection -> Template -> ActionM ()
+lookupUserPage mvconn templ = do
   username <- param "user"
-  muser <- liftIO $ getUser conn (Username username)
+  muser <- liftIO $ getUser mvconn (Username username)
   case muser of
     Nothing   -> next
-    Just user ->
-        let (_warnings, rendered) = renderMustacheW templ (toJSON user)
-        in html rendered
+    Just (userId, user) -> do
+        stats <- liftIO $ getUserStats mvconn userId
+        let userPage = UserPage user stats
+            (_warnings, rendered) = renderMustacheW templ (toJSON userPage)
+        html rendered
 
 
-routes :: Config -> [BBTemplate] -> ScottyM ()
+routes :: Config -> Template -> ScottyM ()
 routes cfg@Config{..} templates = do
   get  "/"        (content home)
   get  "/signup"  (content signup)
@@ -95,10 +97,8 @@ startServer :: Config -> IO ()
 startServer cfg = do
   port      <- getPort
   templates <- loadTemplates
-  case templates of
-    Left errors     -> printTemplateErrors errors
-    Right templates_ ->
-      scotty port (routes cfg templates_)
+  -- TODO loaded template stats (# loaded, etc)
+  scotty port (routes cfg templates)
 
 
 getPort :: IO Int

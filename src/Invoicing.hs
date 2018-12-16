@@ -7,9 +7,12 @@ module Invoicing
 import Control.Applicative (optional)
 import Data.Text.Encoding (decodeUtf8)
 import Network.RPC.Config (SocketConfig(..))
+import Control.Concurrent.MVar (withMVar)
+import Network.HTTP.Types (status402)
 import Web.Scotty
 import Data.Text (Text)
 import Control.Monad.IO.Class (liftIO)
+import System.Timeout (timeout)
 
 import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as B8
@@ -35,17 +38,28 @@ getInvoice :: Config -> ActionM ()
 getInvoice Config{..} = do
   msatoshis   <- msats <$> param "msatoshi"
   description <-           param "description"
-  inv <- liftIO (newInvoice cfgRPC msatoshis description)
+  inv <- liftIO $ withMVar cfgRPC $ \sock ->
+           newInvoice sock msatoshis description
   json inv
 
+micro :: Int
+micro = 1000000
+
+-- max 30 minutes
+sanitizeTimeout :: Int -> Int
+sanitizeTimeout = min (1800 * micro) . (*micro)
 
 waitInvoice :: Config -> ActionM ()
 waitInvoice Config{..} = do
   mtimeout <- optional (param "timeout")
   invId <- param "invId"
-  let timeout = maybe 30 (min (1800 :: Int)) mtimeout
-  inv <- waitinvoice cfgRPC invId
-  json inv
+  -- default 30 second timeout
+  let waitFor = maybe (30 * micro) sanitizeTimeout mtimeout
+  minv <- liftIO $ timeout waitFor $ withMVar cfgRPC $ \sock ->
+            waitinvoice sock invId
+  case minv of
+    Nothing  -> status status402
+    Just inv -> json inv
 
 invoiceRoutes :: Config -> ScottyM ()
 invoiceRoutes cfg = do

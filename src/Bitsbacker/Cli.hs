@@ -1,7 +1,9 @@
+{-# LANGUAGE RecordWildCards #-}
 
 module Bitsbacker.Cli where
 
 import Database.SQLite.Simple (Connection)
+import Control.Concurrent.MVar (MVar, withMVar)
 import System.Exit (exitFailure)
 import Data.Text (Text)
 
@@ -9,6 +11,7 @@ import qualified Data.Text as T
 
 import Bitsbacker.Data.User
 import Bitsbacker.Server
+import Bitsbacker.Config
 
 createUserUsage :: IO ()
 createUserUsage = do
@@ -16,8 +19,8 @@ createUserUsage = do
   exitFailure
 
 
-createUserCmd :: Connection -> [Text] -> IO ()
-createUserCmd conn args = do
+createUserCmd :: MVar Connection -> [Text] -> IO ()
+createUserCmd mvconn args = do
   case args of
     (name:email:pass:adminArg) -> do
       user_ <- createUser (Plaintext pass)
@@ -27,7 +30,7 @@ createUserCmd conn args = do
                   , userEmail       = Email email
                   , userPermissions = Permissions (if isAdmin then 1 else 0)
                   }
-      userId <- insertUser conn user
+      userId <- withMVar mvconn $ \conn -> insertUser conn user
       putStrLn ("created " ++ (if isAdmin then "admin" else "normal")
                            ++ " user "
                            ++ ('\'' : T.unpack name) ++ "'"
@@ -37,14 +40,14 @@ createUserCmd conn args = do
     _ -> createUserUsage
 
 
-processArgs :: Connection -> Text -> [Text] -> IO ()
-processArgs conn arg rest =
+processArgs :: Config -> Text -> [Text] -> IO ()
+processArgs cfg@Config{..} arg rest =
     case (arg, rest) of
       ("create-user", args) ->
-          createUserCmd conn args
+          createUserCmd cfgConn args
 
       ("server", _) ->
-          startServer conn
+          startServer cfg
 
       (_, _) ->
           usage

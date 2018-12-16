@@ -5,9 +5,9 @@ module Bitsbacker.Templates where
 import Control.Arrow (left)
 import Control.Exception (try, SomeException)
 import Data.Bifunctor (bimap)
-import Data.Either (partitionEithers)
 import Data.Text (Text)
 import Data.Void (Void)
+import Data.List (isSuffixOf)
 import Text.Megaparsec (ParseError)
 import Text.Mustache
 
@@ -47,13 +47,31 @@ loadTemplate typ = do
 templateTypes :: [TemplateType]
 templateTypes = enumFrom (toEnum 0)
 
+-- for each template, add references to other templates
 
-loadTemplates :: IO (Either [(TemplateType, TemplateError)] [BBTemplate])
+-- fixupPartials :: [BBTemplate] -> [BBTemplate]
+-- fixupPartials templates = foldr fixup [] zipped
+--   where
+--     zipped = zip [0..] templates
+--     fixup (i, bbt) out =
+--         foldr update bbt (map snd (filter ((/=i) . fst) zipped))
+--     update otherTemplate out@BBTemplate{..} =
+--         let
+--             !updatedTemplate = Template (bbTemplate)
+
+
+loadTemplates :: IO Template
 loadTemplates = do
-  es <- zip templateTypes <$> traverse loadTemplate templateTypes
-  let es1 = map (\(tt, e) -> left (tt,) e) es
-      es2 = partitionEithers es1
-  return $
-    case (es2) of
-      ([], templates) -> Right templates
-      (errs, _)       -> Left errs
+  compileMustacheDir' (isSuffixOf ".html")
+                      (templateName UserTemplate)
+                      "templates"
+
+-- loadTemplates :: IO (Either [(TemplateType, TemplateError)] [BBTemplate])
+-- loadTemplates = do
+--   es <- zip templateTypes <$> traverse loadTemplate templateTypes
+--   let es1 = map (\(tt, e) -> left (tt,) e) es
+--       es2 = partitionEithers es1
+--   return $
+--     case (es2) of
+--       ([], templates) -> Right templates
+--       (errs, _)       -> Left errs

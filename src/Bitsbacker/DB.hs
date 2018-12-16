@@ -33,7 +33,7 @@ migrations = [
      \                   making TEXT, \
      \                   permissions INTEGER) ",    -- 2
 
-     "CREATE TABLE invoices (invoiceId BLOB PRIMARY KEY),\
+     "CREATE TABLE invoices (invoiceId BLOB PRIMARY KEY,\
      \                       expiry INTEGER,\
      \                       state INTEGER)"       -- 3
   ]
