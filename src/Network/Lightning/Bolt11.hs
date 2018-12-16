@@ -15,7 +15,7 @@ module Network.Lightning.Bolt11
     , isDescription
     ) where
 
-import Bitcoin.Bech32 (bech32Decode, toBase256, toBase256', Word5(..))
+import Bitcoin.Bech32 (bech32Decode, toBase256, Word5(..))
 import Bitcoin.Denomination (btc, MSats, Denomination(toMsats))
 
 import Control.Applicative
@@ -26,12 +26,12 @@ import Data.Bits ((.|.), shiftL)
 import Data.Foldable (foldl')
 import Data.Attoparsec.Text
 import Data.ByteString (ByteString)
-import Numeric (showHex)
+
 
 import qualified Data.ByteString as BS
-import qualified Data.Text as T
+
 import qualified Data.ByteString.Builder as BS
-import qualified Data.ByteString.Char8 as B8
+
 import qualified Data.ByteString.Lazy.Char8 as BL
 -- import qualified Crypto.Secp256k1 as Secp
 
@@ -52,15 +52,15 @@ data Tag =
    | ExtraRouteInfo
    deriving (Show, Eq)
 
-tagToId :: Tag -> Int
-tagToId PaymentHash{}        = 1
-tagToId Description{}        = 13
-tagToId PayeePubkey{}        = 19
-tagToId DescriptionHash{}    = 23
-tagToId Expiry{}             = 6
-tagToId MinFinalCltvExpiry{} = 24
-tagToId OnchainFallback{}    = 9
-tagToId ExtraRouteInfo{}     = 3
+-- tagToId :: Tag -> Int
+-- tagToId PaymentHash{}        = 1
+-- tagToId Description{}        = 13
+-- tagToId PayeePubkey{}        = 19
+-- tagToId DescriptionHash{}    = 23
+-- tagToId Expiry{}             = 6
+-- tagToId MinFinalCltvExpiry{} = 24
+-- tagToId OnchainFallback{}    = 9
+-- tagToId ExtraRouteInfo{}     = 3
 
 isPaymentHash :: Tag -> Bool
 isPaymentHash PaymentHash{} = True
@@ -78,7 +78,7 @@ data Currency = Bitcoin
               | BitcoinRegtest
               deriving (Show, Eq)
 
-newtype Bolt11Amount = Bolt11Amount { getBolt11Amount :: (Int, Multiplier) }
+newtype Bolt11Amount = Bolt11Amount { _getBolt11Amount :: (Int, Multiplier) }
     deriving (Eq, Ord)
 
 instance Show Bolt11Amount where
@@ -130,8 +130,8 @@ parseHrpAmount = do
 
 hrpParser :: Parser Bolt11HRP
 hrpParser = do
-  char 'l'
-  char 'n'
+  _ <- char 'l'
+  _ <- char 'n'
   currency <- parseCurrency
   mamt     <- optional parseHrpAmount
   return (Bolt11HRP currency mamt)
@@ -153,11 +153,13 @@ w5txt :: [Word5] -> Text
 w5txt = decodeUtf8 . w5bs
 
 tagParser :: [Word5] -> (Maybe Tag, [Word5])
-tagParser []   = (Nothing, [])
-tagParser words
-  | length words < 8 = (Nothing, words)
-tagParser all@(UnsafeWord5 typ:d1:d2:rest)
-  | length rest < 7 = (Nothing, all)
+tagParser []          = (Nothing, [])
+tagParser ws@[_]   = (Nothing, ws)
+tagParser ws@[_,_] = (Nothing, ws) -- appease the compiler warning gods
+tagParser ws
+  | length ws < 8 = (Nothing, ws)
+tagParser ws@(UnsafeWord5 typ:d1:d2:rest)
+  | length rest < 7 = (Nothing, ws)
   | otherwise = (Just tag, leftovers)
   where
     dataLen           = w5int [d1,d2]
@@ -183,11 +185,11 @@ data MSig = Sig [Word5]
           | Unk [Word5]
 
 tagsParser :: [Word5] -> ([Tag], MSig)
-tagsParser words
-  | length words == 104 = ([], Sig words)
+tagsParser ws
+  | length ws == 104 = ([], Sig ws)
   | otherwise =
       let
-          (mtag, rest)   = tagParser words
+          (mtag, rest)   = tagParser ws
           first fn (a,b) = (fn a, b)
       in
         maybe ([], Unk rest)
@@ -203,7 +205,7 @@ decodeBolt11 txt = do
       timestamp             = w5int timestampBits
       (tags, leftover)      = tagsParser rest
   sig <- case leftover of
-           Sig words -> maybe (Left "corrupt") Right (toBase256 words)
+           Sig ws -> maybe (Left "corrupt") Right (toBase256 ws)
            Unk left  -> Left ("corrupt, leftover: " ++ show (Hex (w5bs left) ))
   parsedHrp <- parseOnly hrpParser hrp
   Right (Bolt11 parsedHrp timestamp tags (Hex (BS.pack sig)))

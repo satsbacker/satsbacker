@@ -11,16 +11,20 @@ import Data.Text (Text)
 import Network.RPC
 import Network.RPC.CLightning.Peer
 import Network.RPC.CLightning.Output
+import Network.RPC.CLightning.Invoice
 
-listPeers :: MonadIO m => SocketConfig -> m [Peer]
-listPeers cfg = getPeersResp <$> rpc_ cfg "listpeers"
+listpeers :: MonadIO m => SocketConfig -> m [Peer]
+listpeers cfg = getPeersResp <$> rpc_ cfg "listpeers"
 
-newAddr :: MonadIO m => SocketConfig -> Text -> m Text
-newAddr cfg addrtype = do
+newaddr :: MonadIO m => SocketConfig -> Text -> m Text
+newaddr cfg addrtype = do
   res :: Value <- rpc cfg "newaddr" [addrtype]
   maybe (fail "Could not decode address from newaddr") return
         (res ^? key "address" . _String)
 
-listFunds :: MonadIO m => SocketConfig -> m [Output]
-listFunds cfg = listFundsOutputs <$> rpc_ cfg "listfunds"
+listfunds :: MonadIO m => SocketConfig -> m [Output]
+listfunds cfg = listFundsOutputs <$> rpc_ cfg "listfunds"
 
+waitinvoice :: MonadIO m => SocketConfig -> Text -> m (Maybe Invoice)
+waitinvoice cfg invId =
+  fmap getCLInvoice <$> rpc cfg "waitinvoice" [invId]

@@ -6,7 +6,7 @@ import Data.Aeson
 import Data.ByteString (ByteString)
 import Data.Monoid ((<>))
 import Control.Monad.Logger
-import Control.Monad.IO.Class (liftIO, MonadIO)
+import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text)
 import Data.Word (Word16, Word8)
 import Network.HTTP.Client

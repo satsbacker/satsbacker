@@ -1,15 +1,21 @@
 
 .container {
     max-width: 800px;
+    padding: 1em;
 }
 
-.hero h1 {
+.hero {
+    padding: 1em;
     text-align: center;
+    background-color: #f9f9f9;
 }
 
 .header {
-    padding: 10px 0 0 18px;
-    margin-bottom: 40px;
+    margin: 0.8em 0 0.8em 1.2em;
+}
+
+.overview span {
+    margin-right: 1em;
 }
 
 .logo {
@@ -20,3 +26,12 @@
 h1 {
     font-size: 1.6em;
 }
+
+h2 {
+    font-size: 1.4em;
+}
+
+h3 {
+    font-size: 1.2em;
+}
+

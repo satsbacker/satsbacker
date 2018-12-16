@@ -15,7 +15,7 @@ import Data.Aeson
 import Bitcoin.Denomination (MSats)
 import Network.RPC.PeerState (PeerState)
 import Network.RPC.Common
-import Network.RPC.JsonRPC (noArgs)
+
 import Data.Text (Text)
 
 data PeerChan = PeerChan {

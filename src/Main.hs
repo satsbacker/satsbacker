@@ -5,140 +5,20 @@
 
 module Main where
 
-import Control.Monad.IO.Class (liftIO)
-import Data.Aeson (Value)
-import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import Database.SQLite.Simple (Connection)
-import Lucid
-import Network.Wai (Middleware)
-import Network.Wai.Middleware.Static (staticPolicy, addBase)
-import System.Environment
-import System.Exit (exitFailure)
-import Text.Read (readMaybe)
-import Web.Scotty
+import System.Environment (getArgs)
 
-import Network.Lightning.Bolt11 (decodeBolt11)
-
-import Network.RPC (rpc)
-import Network.RPC.CLightning
-import Network.RPC.CLightning.Invoice
-import Network.RPC.Config (SocketConfig(..))
-
-import Bitcoin.Denomination (msats)
-
-import Invoicing (invoiceRoutes)
-import Bitsbacker.UniqueId (newUniqueId, encodeUniqueId)
-import Bitsbacker.Html
-import Bitsbacker.Html.User
+import Bitsbacker.Cli
 import Bitsbacker.DB (migrate, openDb)
-import Bitsbacker.Data.User
 
 import qualified Data.Text as T
-import qualified Data.ByteString.Char8 as B8
-
-getSocketConfig :: IO SocketConfig
-getSocketConfig = do
-  path <- getRPCSocket
-  return (SocketConfig path Nothing)
-
-getRPCSocket :: IO FilePath
-getRPCSocket = do
-  mstrsocket <- lookupEnv "RPCSOCK"
-  return (fromMaybe "/home/jb55/.lightning-bitcoin-rpc" mstrsocket)
 
 
-getPort :: IO Int
-getPort = do
-  mstrport <- lookupEnv "PORT"
-  return (fromMaybe 8002 (mstrport >>= readMaybe))
+main :: IO ()
+main = do
+  args <- fmap (map T.pack) getArgs
+  mainWith args
 
-home :: Html ()
-home = do
-  template Nothing $ do
-    h1_ "Hello, world!"
-
-postSignup :: ActionM ()
-postSignup = do
-  name  <- param "name"
-  email <- param "email"
-  text (name <> email)
-
-signup :: Html ()
-signup = do
-  template (Just "signup") $ do
-    h1_ "Signup"
-    form_ $ do
-      textInput "name"
-      textInput "email"
-
-static :: String -> Network.Wai.Middleware
-static path =
-  staticPolicy (addBase path)
-
-routes :: Connection -> SocketConfig -> ScottyM ()
-routes conn rpc = do
-  get  "/"        (content home)
-  get  "/signup"  (content signup)
-  post "/signup"  postSignup
-  get  "/:user"   (lookupUserPage conn)
-  invoiceRoutes conn rpc
-  middleware (static "public")
-
-createUserUsage :: IO ()
-createUserUsage = do
-  putStrLn "usage: bitsbacker create-user <name> <email> <password> [is-admin]"
-  exitFailure
-
-usage :: IO ()
-usage = do
-  putStrLn "usage: bitsbacker <command>"
-  putStrLn ""
-  putStrLn "commands:"
-  putStrLn ""
-  putStrLn "  - create-user"
-  putStrLn ""
-  exitFailure
-
-startServer :: Connection -> IO ()
-startServer conn = do
-  port <- getPort
-  rpc  <- getSocketConfig
-  scotty port (routes conn rpc)
-
-createUserCmd :: Connection -> [Text] -> IO ()
-createUserCmd conn args = do
-  case args of
-    (name:email:pass:adminArg) -> do
-      user_ <- createUser (Plaintext pass)
-      let isAdmin = not (null adminArg)
-          user = user_ {
-                    userName  = Username name
-                  , userEmail = Email email
-                  , userPermissions = Permissions (if isAdmin then 1 else 0)
-                  }
-      userId <- insertUser conn user
-      putStrLn ("created " ++ (if isAdmin then "admin" else "normal")
-                           ++ " user "
-                           ++ ('\'' : T.unpack name) ++ "'"
-                           ++ " <" ++ T.unpack email ++ ">"
-                           ++ " (id:" ++ show userId ++ ")"
-                           )
-    _ -> createUserUsage
-
-processArgs :: Connection -> Text -> [Text] -> IO ()
-processArgs conn arg rest =
-    case (arg, rest) of
-      ("create-user", args) ->
-          createUserCmd conn args
-
-      ("server", _) ->
-          startServer conn
-
-      (_, _) ->
-          usage
-
-server = mainWith ["server"]
 
 mainWith :: [Text] -> IO ()
 mainWith args = do
@@ -148,7 +28,3 @@ mainWith args = do
   case args of
     (x:xs) -> processArgs conn x xs
     []     -> usage
-main :: IO ()
-main = do
-  args <- fmap (map T.pack) getArgs
-  mainWith args

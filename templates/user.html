@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+{{>head}}
+<body>
+    <div class="hero">
+        {{#user}}
+        <h1>
+            <p><b>{{name}}</b> is {{making}}</p>
+        </h1>
+        {{/user}}
+        {{#stats}}
+        <div class="overview">
+            <span class="backers"><b>{{backers}}</b> backers</span>
+            <span class="bits-per-month"><b>{{perMonth}}</b> bits/month</span>
+        </div>
+        {{/stats}}
+    </div>
+    <div class="container">
+        {{> body}}
+        <h2>About</h2>
+        <h2>Goals</h2>
+        <ul>
+            <li>goal</li>
+        </ul>
+    </div>
+</body>
+
+</html>

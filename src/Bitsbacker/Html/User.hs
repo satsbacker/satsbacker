@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -6,29 +7,65 @@ module Bitsbacker.Html.User where
 import Bitsbacker.Data.User
 import Bitsbacker.Html
 
-import Control.Monad.IO.Class (liftIO)
-import Data.Text (Text)
-import Database.SQLite.Simple (Connection)
-import Lucid
-import Web.Scotty
 
-userPhrase :: Username -> Text -> Text
+import Data.Text (Text)
+
+import Lucid
+
+
+divc :: Term [Attribute] result => Text -> result
+divc cls = div_ [ class_ cls ]
+
+userPhrase :: Username -> Text -> Html ()
 userPhrase (Username user) making =
+    p_ $ do
+      b_ (toHtml user)
+      toHtml (" is making " <> making)
+
+txtUserPhrase :: Username -> Text -> Text
+txtUserPhrase (Username user) making =
     user <> " is making " <> making
 
-userPage :: User -> Html ()
-userPage User{..} =
-  let
-    phrase = toHtml (userPhrase userName userMaking)
-  in
-    template (Just phrase) $ do
-      div_ [ class_ "hero" ] $ do
-        h1_ phrase
 
-lookupUserPage :: Connection -> ActionM ()
-lookupUserPage conn = do
-  username <- param "user"
-  muser <- liftIO $ getUser conn (Username username)
-  case muser of
-    Nothing   -> next
-    Just user -> content (userPage user)
+becomeBacker :: User -> Html ()
+becomeBacker = undefined
+
+
+overview :: Html ()
+overview =
+  divc "overview" $ do
+    oelem "backers"        (b_ "1000" >> " backers")
+    oelem "bits-per-month" (b_ "100k" >> " bits/month")
+  where
+    oelem c = div_ [classes_ [c, "overview-elem"]]
+
+
+goals :: Html ()
+goals = do
+  h2_ "Goals"
+
+
+about :: Text -> Html ()
+about about_ = do
+  h2_ "About"
+  p_ (toHtml about_)
+
+
+-- userPage :: UserPage -> Html ()
+-- userPage UserPage{..} =
+--   let User{..}      = userPageUser
+--       UserStats{..} = userPageStats
+--   in
+--     template (Just txtPhrase) $ do
+--       div_ [ class_ "hero" ] $ do
+--         h1_ phrase
+--         overview
+--       div_ [ class_ "container" ] $ do
+--         -- about
+--         goals
+--         ul_ (li_ "goal")
+--   where
+--     phrase    = userPhrase userName userMaking
+--     txtPhrase = txtUserPhrase userName userMaking
+
+

@@ -17,10 +17,10 @@ import Network.RPC.Config (SocketConfig(..))
 import Network.RPC.Error
 import Network.Socket.ByteString
 import Network.Socket (socket, Family(AF_UNIX), SocketType(Stream), connect, shutdown,
-                       SockAddr(SockAddrUnix), close, ShutdownCmd(ShutdownReceive))
+                       SockAddr(SockAddrUnix), ShutdownCmd(ShutdownReceive))
 
 import qualified Data.ByteString as BS
-import qualified Data.DList as DL
+
 import qualified Data.ByteString.Lazy as Lazy
 
 
@@ -44,9 +44,9 @@ sockRequest SocketConfig{..} bs = liftIO $ timeout tout $ do
     tout        = fromMaybe defaultTimeout rpcTimeout
     readAll soc = fmap Lazy.fromChunks (readChunks soc 0)
 
-    readChunks soc open = unsafeInterleaveIO $ do
+    readChunks soc bo = unsafeInterleaveIO $ do
         chunk <- recv soc 4096
-        let count = open + openCloseSum chunk
-        if count == 0 || BS.null chunk
+        let newBo = bo + openCloseSum chunk
+        if newBo == 0 || BS.null chunk
           then shutdown soc ShutdownReceive >> return [chunk]
-          else fmap (chunk :) (readChunks soc count)
+          else fmap (chunk :) (readChunks soc newBo)

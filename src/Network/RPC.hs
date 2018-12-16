@@ -10,7 +10,7 @@ module Network.RPC
 import Data.Aeson
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.ByteString.Lazy (toStrict)
-import Data.Bifunctor (bimap)
+
 import Data.Text (Text)
 
 import Network.RPC.CLightning.Commands as X

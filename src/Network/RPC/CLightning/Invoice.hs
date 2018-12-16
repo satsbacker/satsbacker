@@ -7,22 +7,17 @@
 module Network.RPC.CLightning.Invoice
     ( Invoice(..)
     , NewInvoice(..)
+    , CLInvoice(..)
     , fromNewInvoice
     ) where
 
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8)
-import Data.Int (Int64)
 import Data.Aeson
-import Data.Maybe (fromMaybe)
-import Data.Aeson.Types (Parser(..))
-import Data.Vector ((!?))
-import Data.ByteString (ByteString)
+import Data.Aeson.Types (Parser)
 
-import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.ByteString.Builder as BS
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
 
 import Bitcoin.Denomination (MSats(..))
@@ -33,6 +28,7 @@ newtype NewInvoice = NewInvoice { getNewInvoice :: Text }
 
 instance FromJSON NewInvoice where
     parseJSON (Object obj) = NewInvoice <$> obj .: "bolt11"
+    parseJSON _            = fail "NewInvoice: expected bolt11 field"
 
 instance ToJSON Invoice where
     toJSON Invoice{..} =
@@ -64,6 +60,7 @@ data Invoice = Invoice {
 newtype CLInvoice = CLInvoice { getCLInvoice :: Invoice }
     deriving Show
 
+defaultInvoice :: Invoice
 defaultInvoice =
     Invoice {
       invoiceId             = ""
@@ -126,3 +123,4 @@ instance FromJSON CLInvoice where
             Object obj -> CLInvoice <$> parseCLInvoice obj
             _          -> fail "unknown clightning invoice encoding"
     parseJSON (Object obj) = CLInvoice <$> parseCLInvoice obj
+    parseJSON _            = fail "unspected CLInvoice value"

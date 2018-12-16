@@ -31,8 +31,11 @@ migrations = [
      \                   email_confirmed INTEGER, \
      \                   name TEXT unique, \
      \                   making TEXT, \
-     \                   permissions INTEGER) "    -- 2
+     \                   permissions INTEGER) ",    -- 2
 
+     "CREATE TABLE invoices (invoiceId BLOB PRIMARY KEY),\
+     \                       expiry INTEGER,\
+     \                       state INTEGER)"       -- 3
   ]
 
 hasVersionTable :: Connection -> IO Bool

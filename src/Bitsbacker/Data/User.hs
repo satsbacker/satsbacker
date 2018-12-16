@@ -8,6 +8,8 @@ import Data.Maybe (listToMaybe)
 import Crypto.PasswordStore (makePassword)
 import Data.ByteString (ByteString)
 import Data.Text (Text)
+import Data.Int (Int64)
+import Data.Aeson
 import Data.Text.Encoding (encodeUtf8)
 import Database.SQLite.Simple
 import Database.SQLite.Simple.FromField
@@ -30,6 +32,9 @@ newtype HashedPassword = HashedPassword { getHashedPassword :: ByteString }
 newtype Permissions = Permissions { getPermissions :: Int }
     deriving (Show, Eq, Ord, ToField, FromField)
 
+newtype UserId = UserId { getUserId :: Int64 }
+    deriving (Show, Eq, Ord)
+
 data User = User {
       userName           :: Username
     , userPassword       :: HashedPassword
@@ -37,6 +42,16 @@ data User = User {
     , userEmailConfirmed :: Bool
     , userPermissions    :: Permissions
     , userMaking         :: Text
+    }
+
+data UserPage = UserPage {
+      userPageUser  :: User
+    , userPageStats :: UserStats
+    }
+
+data UserStats = UserStats {
+      userStatsBackers  :: Int
+    , userStatsPerMonth :: Int
     }
 
 userFields :: [Text]
@@ -67,6 +82,25 @@ instance ToRow User where
             , userMaking
             )
 
+instance ToJSON User where
+    toJSON User{..} =
+        object [ "making"   .= userMaking
+               , "name"     .= getUsername userName
+               , "email"    .= getEmail userEmail
+               ]
+
+instance ToJSON UserPage where
+    toJSON UserPage{..} =
+        object [ "user"   .= userPageUser
+               , "stats"  .= userPageStats
+               ]
+
+instance ToJSON UserStats where
+    toJSON UserStats{..} =
+        object [ "backers"  .= userStatsBackers
+               , "perMonth" .= userStatsPerMonth
+               ]
+
 defaultPermissions :: Permissions
 defaultPermissions = Permissions 0
 
@@ -79,11 +113,11 @@ createUser (Plaintext password) = do
              , userEmail          = Email ""
              , userEmailConfirmed = True
              , userPermissions    = defaultPermissions
-             , userMaking         = "their backer page"
+             , userMaking         = "bitsbacker"
            }
 
 insertUser :: Connection -> User -> IO Int
-insertUser conn user = do 
+insertUser conn user = do
   let fields = T.intercalate ", " userFields
       qs     = map (const "?") userFields
       qsc    = T.intercalate ", " qs
@@ -97,3 +131,7 @@ getUser conn user = do
       q = "SELECT "<>fields<>" FROM users WHERE name = ? LIMIT 1"
   users <- query conn (Query q) (Only user)
   return (listToMaybe users)
+
+-- getUserStats :: Connection -> UserId -> IO UserStats
+-- getUserStats conn userId = do
+--   let q = 
