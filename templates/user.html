@@ -1,16 +1,16 @@
 <!DOCTYPE html>
+{{#user}}
 <html>
 <head>
 {{>head}}
-    {{#user}}
-    <title>{{ name }} is making their backer page | bitsbacker</title>
+    <title>{{ name }} is {{making}} | bitsbacker</title>
 </head>
 <body>
+    {{>header}}
     <div class="hero">
         <h1>
             <p><b>{{name}}</b> is {{making}}</p>
         </h1>
-        {{/user}}
         {{#stats}}
         <div class="overview">
             <span class="backers"><b>{{backers}}</b> backers</span>
@@ -20,11 +20,23 @@
     </div>
     <div class="container">
         <h2>About</h2>
-        <h2>Goals</h2>
-        <ul>
-            <li>goal</li>
-        </ul>
+        <p>My name is William Casarin. I've started Bitsbacker as a response to
+        Pateron's abusive treatment of users that don't fit their perferred
+        political mold. Bitsbacker is open source alternative built on the
+        Bitcoin Lightning network.</p>
+
+        <p>When running Bitsbacker, the users and backers are in control. No
+        service provider or payment processor can shut you down. As long as you
+        have server with a connection to the internet, you can get paid by
+        people who support your work. </p>
+
+        <h3>How you can help</h3> <p>I need your help building this out. I've
+        started a bitsbacker for bitsbacker. To help make this a reality:</p>
+
+       <div class="become-a-backer">
+          <a class="button button-primary" href="/back/{{name}}">Become a backer</a>
+       </div>
     </div>
 </body>
-
 </html>
+{{/user}}

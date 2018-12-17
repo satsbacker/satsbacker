@@ -32,6 +32,7 @@ postSignup = do
   email <- param "email"
   text (name <> email)
 
+
 signup :: Html ()
 signup = do
   template (Just "signup") $ do
@@ -40,20 +41,10 @@ signup = do
       textInput "name"
       textInput "email"
 
-getTemplate :: Template -> TemplateType -> Template
-getTemplate templates typ =
-    templates { templateActual = templateName typ }
 
--- getTemplate :: [BBTemplate] -> TemplateType -> Template
--- getTemplate templates typ =
---   let
---       mtemplate = find ((==typ) . bbTemplateType) templates
---       err = T.unpack (unPName (templateName typ)) ++ " template not loaded"
---   in
---       maybe (error err) bbTemplate mtemplate
-
--- getUserPage :: User -> UserPage
--- getUserPage user = do
+getTemplate :: Template -> PName -> Template
+getTemplate templates pname =
+    templates { templateActual = pname }
 
 
 lookupUserPage :: MVar Connection -> Template -> ActionM ()
@@ -68,13 +59,18 @@ lookupUserPage mvconn templ = do
             (_warnings, rendered) = renderMustacheW templ (toJSON userPage)
         html rendered
 
+simplePage :: ToJSON a => Template -> a -> ActionM ()
+simplePage templ val = html page
+  where
+    (warnings, page) = renderMustacheW templ (toJSON val)
 
 routes :: Config -> Template -> ScottyM ()
 routes cfg@Config{..} templates = do
-  get  "/"        (content home)
-  get  "/signup"  (content signup)
-  post "/signup"  postSignup
-  get  "/:user"   (lookupUserPage cfgConn (t UserTemplate))
+  get  "/"           (simplePage (t "home") ())
+  get  "/signup"     (content signup)
+  post "/signup"     postSignup
+  get  "/:user"      (lookupUserPage cfgConn (t "user"))
+  get  "/back/:user" (lookupUserPage cfgConn (t "back"))
   invoiceRoutes cfg
   middleware (static "public")
   where

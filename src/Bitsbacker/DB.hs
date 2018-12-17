@@ -26,16 +26,23 @@ migrations = [
     "INSERT INTO version (version) VALUES (1)",    -- 1
 
     "CREATE TABLE users (id INTEGER PRIMARY KEY,\
-     \                   password TEXT, \
-     \                   email TEXT, \
-     \                   email_confirmed INTEGER, \
-     \                   name TEXT unique, \
-     \                   making TEXT, \
-     \                   permissions INTEGER) ",    -- 2
+     \ password TEXT, \
+     \ email TEXT, \
+     \ email_confirmed INTEGER, \
+     \ name TEXT unique, \
+     \ making TEXT, \
+     \ permissions INTEGER) ",    -- 2
 
      "CREATE TABLE invoices (invoiceId BLOB PRIMARY KEY,\
-     \                       expiry INTEGER,\
-     \                       state INTEGER)"       -- 3
+     \ expiry INTEGER,\
+     \ state INTEGER)",       -- 3
+
+     "CREATE TABLE tiers (id INTEGER PRIMARY KEY,\
+     \ user_id INTEGER,\
+     \ description TEXT,\
+     \ amountFiat INTEGER,\
+     \ amountMsats INTEGER,\
+     \ state INTEGER)"
   ]
 
 hasVersionTable :: Connection -> IO Bool

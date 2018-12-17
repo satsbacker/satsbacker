@@ -4,10 +4,32 @@
     padding: 1em;
 }
 
+.super {
+    margin: 10vh 0 10vh 0;
+    font-size: 1.5em;
+    text-align: center;
+}
+
+/* For devices larger than 400px */
+/* @media (min-width: 400px) { */
+/*     .super { */
+/*         margin: 10vh 10vw 10vh 10vw; */
+/*         padding: 0; */
+/*     } */
+/* } */
+
 .hero {
     padding: 1em;
     text-align: center;
-    background-color: #f9f9f9;
+}
+
+.become-a-backer {
+    text-align: center;
+}
+
+.become-a-backer .button {
+    height: 5em;
+    line-height: 5em;
 }
 
 .header {
@@ -25,13 +47,16 @@
 
 h1 {
     font-size: 1.6em;
+    margin-bottom: 0;
 }
 
 h2 {
     font-size: 1.4em;
+    font-weight: bold;
 }
 
 h3 {
     font-size: 1.2em;
+    font-weight: bold;
 }
 
