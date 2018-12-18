@@ -12,6 +12,7 @@ import qualified Data.Text as T
 import Bitsbacker.Data.User
 import Bitsbacker.Server
 import Bitsbacker.Config
+import Bitsbacker.DB.Table (insert)
 
 createUserUsage :: IO ()
 createUserUsage = do
@@ -30,7 +31,7 @@ createUserCmd mvconn args = do
                   , userEmail       = Email email
                   , userPermissions = Permissions (if isAdmin then 1 else 0)
                   }
-      userId <- withMVar mvconn $ \conn -> insertUser conn user
+      userId <- withMVar mvconn $ \conn -> insert conn user
       putStrLn ("created " ++ (if isAdmin then "admin" else "normal")
                            ++ " user "
                            ++ ('\'' : T.unpack name) ++ "'"

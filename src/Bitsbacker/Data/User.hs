@@ -17,6 +17,8 @@ import Database.SQLite.Simple
 import Database.SQLite.Simple.FromField
 import Database.SQLite.Simple.ToField
 
+import Bitsbacker.DB.Table (insert, Table(..))
+
 import qualified Data.Text as T
 
 newtype Email = Email { getEmail :: Text }
@@ -34,7 +36,7 @@ newtype HashedPassword = HashedPassword { getHashedPassword :: ByteString }
 newtype Permissions = Permissions { getPermissions :: Int }
     deriving (Show, Eq, Ord, ToField, FromField)
 
-newtype UserId = UserId { getUserId :: Int64 }
+newtype UserId = UserId { getUserId :: Int }
     deriving (Show, Eq, Ord)
 
 data User = User {
@@ -65,6 +67,12 @@ userFields = [
   , "permissions"
   , "making"
   ]
+
+
+instance Table User where
+    tableName _   = "users"
+    tableFields _ = userFields
+
 
 instance FromRow User where
   fromRow = User <$> field
@@ -115,18 +123,8 @@ createUser (Plaintext password) = do
              , userEmail          = Email ""
              , userEmailConfirmed = True
              , userPermissions    = defaultPermissions
-             , userMaking         = "bitsbacker"
+             , userMaking         = "cool stuff"
            }
-
-insertUser :: Connection -> User -> IO Int
-insertUser conn user = do
-  let fields = T.intercalate ", " userFields
-      qs     = map (const "?") userFields
-      qsc    = T.intercalate ", " qs
-      q = "INSERT INTO users ("<>fields<>") values ("<>qsc<>")"
-  execute conn (Query q) user
-  fmap fromIntegral (lastInsertRowId conn)
-
 
 getUser :: MVar Connection -> Username -> IO (Maybe (UserId, User))
 getUser mvconn username = do
@@ -137,7 +135,7 @@ getUser mvconn username = do
     case listToMaybe muser of
       Nothing   -> return Nothing
       Just user_ ->
-          do userId <- lastInsertRowId conn
+          do userId <- fmap fromIntegral (lastInsertRowId conn)
              return (Just (UserId userId, user_))
 
 

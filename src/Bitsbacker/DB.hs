@@ -38,10 +38,12 @@ migrations = [
      \ state INTEGER)",       -- 3
 
      "CREATE TABLE tiers (id INTEGER PRIMARY KEY,\
-     \ user_id INTEGER,\
+     \ user_id INTEGER NOT NULL,\
      \ description TEXT,\
-     \ amountFiat INTEGER,\
-     \ amountMsats INTEGER,\
+     \ quota INTEGER,\
+     \ type INTEGER not null,\
+     \ amount_fiat INTEGER,\
+     \ amount_msats INTEGER,\
      \ state INTEGER)"
   ]
 
