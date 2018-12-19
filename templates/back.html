@@ -17,7 +17,12 @@
            {{#columns}}
             <div class="{{colwidth}} n-{{ncolumns}} column">
                 <div class="tier">
-                    {{description}}
+                    <div class="amount">
+                        <b>{{amount_bits}}</b> bits
+                        <p class="per">per month</p>
+                    </div>
+                    <p>{{description}}</p>
+                    <a class="button button-primary" href="/back/jb55/{{tier_id}}">Select</a>
                 </div>
             </div>
            {{/columns}}

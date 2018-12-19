@@ -59,7 +59,7 @@ lookupUserPage mvconn templ = do
       (_warnings, rendered) = renderMustacheW templ (toJSON userPage)
   html rendered
 
-
+       
 simplePage :: ToJSON a => Template -> a -> ActionM ()
 simplePage templ val = html page
   where
@@ -93,7 +93,7 @@ mkTiersPage :: User -> Int -> [Tier] -> TiersPage
 mkTiersPage user cols tiers =
   TiersPage {
     tiersPageUser   = user
-  , tiersRows       = reverse (map TierCols rs)
+  , tiersRows       = map TierCols rs
   , tiersNumColumns = cols
   , tiersColumnWidth =
       case cols of
@@ -104,12 +104,12 @@ mkTiersPage user cols tiers =
   }
   where
     rs :: [[Tier]]
-    rs = foldl' folder [] tiers
-    folder rows tier =
+    rs = foldr folder [] tiers
+    folder tier rows =
         case rows of
           [] -> [[tier]]
           row:rest
-            | length row == cols -> [tier] : reverse row : rest
+            | length row == cols -> [tier] : row : rest
             | otherwise          -> (tier:row) : rest
 
 

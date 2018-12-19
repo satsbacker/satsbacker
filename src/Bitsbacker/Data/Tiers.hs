@@ -9,7 +9,7 @@ import Database.SQLite.Simple.FromField
 import Control.Concurrent.MVar
 import Data.Aeson
 
-import Bitcoin.Denomination (msats, MSats(..))
+import Bitcoin.Denomination
 
 import Bitsbacker.Data.User (UserId(..))
 
@@ -55,6 +55,7 @@ instance ToJSON TierDef where
                , "quota"        .= tierQuota
                , "amount_fiat"  .= tierAmountFiat
                , "amount_msats" .= tierAmountMSats
+               , "amount_bits"  .= showBits (toBits tierAmountMSats)
                , "type"         .= tierAmountMSats
                , "is_custom"    .= (tierType == Custom)
                ]

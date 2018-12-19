@@ -7,6 +7,7 @@ module Bitcoin.Denomination
     , Bits(..)
     , Btc(..)
     , bits, msats, sats, toBits, btc, toSats, toBtc
+    , showBits
     ) where
 
 import Data.Aeson
@@ -83,6 +84,17 @@ instance Show Sats where
 
 instance Show Btc where
   show (Btc units) = printf "%s BTC" (showRational 3 units)
+
+showBits :: Bits -> String
+showBits (Bits units) =
+    let
+        b = showRational 5 units
+    in
+      reverse $
+        case dropWhile (=='0') (reverse b) of
+          '.' : rest -> rest
+          xs -> xs
+
 
 showRational :: Int -> Rational -> String
 showRational n r =
