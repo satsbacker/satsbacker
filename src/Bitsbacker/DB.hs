@@ -31,6 +31,7 @@ migrations = [
      \ email_confirmed INTEGER, \
      \ name TEXT unique, \
      \ making TEXT, \
+     \ created_at INTEGER NOT_NULL DEFAULT CURRENT_TIMESTAMP, \
      \ permissions INTEGER) ",    -- 2
 
      "CREATE TABLE invoices (invoiceId BLOB PRIMARY KEY,\
@@ -44,7 +45,16 @@ migrations = [
      \ type INTEGER not null,\
      \ amount_fiat INTEGER,\
      \ amount_msats INTEGER,\
-     \ state INTEGER)"
+     \ created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,\
+     \ state INTEGER)",        -- 4
+
+     "CREATE TABLE subscriptions (id INTEGER PRIMARY KEY,\
+     \ for_user INTEGER NOT NULL,\
+     \ user_id INTEGER NOT NULL,\
+     \ valid_until INTEGER NOT NULL,\
+     \ tier_id INTEGER NOT NULL,\
+     \ created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP\
+     \)"
   ]
 
 hasVersionTable :: Connection -> IO Bool

@@ -8,7 +8,6 @@ import Control.Concurrent (MVar, withMVar)
 import Crypto.PasswordStore (makePassword)
 import Data.Aeson
 import Data.ByteString (ByteString)
-import Data.Int (Int64)
 import Data.Maybe (listToMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
@@ -17,7 +16,7 @@ import Database.SQLite.Simple
 import Database.SQLite.Simple.FromField
 import Database.SQLite.Simple.ToField
 
-import Bitsbacker.DB.Table (insert, Table(..))
+import Bitsbacker.DB.Table (Table(..))
 
 import qualified Data.Text as T
 
@@ -129,14 +128,13 @@ createUser (Plaintext password) = do
 getUser :: MVar Connection -> Username -> IO (Maybe (UserId, User))
 getUser mvconn username = do
   let fields = T.intercalate ", " userFields
-      q = "SELECT "<>fields<>" FROM users WHERE name = ? LIMIT 1"
+      q = "SELECT id,"<>fields<>" FROM users WHERE name = ? LIMIT 1"
   withMVar mvconn $ \conn -> withTransaction conn $ do
     muser <- query conn (Query q) (Only username)
     case listToMaybe muser of
       Nothing   -> return Nothing
-      Just user_ ->
-          do userId <- fmap fromIntegral (lastInsertRowId conn)
-             return (Just (UserId userId, user_))
+      Just (Only userId :. user) ->
+        return (Just (UserId userId, user))
 
 
 getUserStats :: MVar Connection -> UserId -> IO UserStats

@@ -7,7 +7,6 @@ module Main where
 
 import Data.Text (Text)
 import System.Environment (getArgs)
-import Database.SQLite.Simple (Connection)
 import Control.Concurrent.MVar (withMVar)
 
 import Bitcoin.Denomination
@@ -16,7 +15,7 @@ import Bitsbacker.Cli
 import Bitsbacker.Config
 import Bitsbacker.Data.User
 import Bitsbacker.Data.Tiers
-import Bitsbacker.DB.Table (insertL, insert)
+import Bitsbacker.DB.Table (insert)
 
 import qualified Data.Text as T
 
@@ -39,36 +38,30 @@ mainWith args = do
 testTierData :: UserId -> [TierDef]
 testTierData userId = 
   let
-      newT = newTier userId
+      newT f b d =
+        (newTier userId) {
+          tierDescription = d
+        , tierAmountFiat = f
+        , tierAmountMSats = (toMsats b)
+        }
   in
-  newT {
-    tierDescription = "Don't have much? That's ok, everything helps!"
-  , tierAmountFiat = 1
-  , tierAmountMSats = toMsats (bits 100)
-  } :
-  newT {
-    tierDescription = "Gain access to periodic backer-only blog posts and updates"
-  , tierAmountFiat = 5
-  , tierAmountMSats = toMsats (bits 1000)
-  } :
-  newT {
-    tierDescription = T.unwords $
+  [
+    newT 1 (bits 100) "Don't have much? That's ok, everything helps!"
+  , newT 5 (bits 1000) "Gain access to periodic backer-only blog posts and updates"
+  , newT 15 (bits 5000) $ T.unwords $
       "In addition to the previous levels, " :
       "gain access to the bitsbacker beta " :
       "when it becomes available." : []
-  , tierAmountFiat = 15
-  , tierAmountMSats = toMsats (bits 5000)
-  } :
-  newT {
-    tierDescription = T.unwords $
+  , newT 50 (bits 10000) $ T.unwords $
       "In addition to the previous levels, recieve a premium " :
       "bitsbacker account, where your account will be " :
       "optionally listed in the bitsbacker hall of fame. " : []
-  , tierAmountFiat = 50
-  , tierAmountMSats = toMsats (bits 10000)
-  } :
-  []
+  ]
 
+testTiers :: UserId -> [Tier]
+testTiers userId =
+    flip map (testTierData userId) $ \tdef ->
+        Tier { tierDef = tdef, tierStats = TierStats 0 }
 
 testData :: IO ()
 testData = do

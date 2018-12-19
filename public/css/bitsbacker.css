@@ -10,13 +10,13 @@
     text-align: center;
 }
 
-/* For devices larger than 400px */
-/* @media (min-width: 400px) { */
-/*     .super { */
-/*         margin: 10vh 10vw 10vh 10vw; */
-/*         padding: 0; */
-/*     } */
-/* } */
+.tier {
+    /* border: 2px solid black; */
+    box-shadow: 0px 1px 4px rgba(0,0,0,0.3);
+    border-radius: 5px;
+    padding: 1em;
+    margin: 1em;
+}
 
 .hero {
     padding: 1em;
