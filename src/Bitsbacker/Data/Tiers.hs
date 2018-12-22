@@ -15,6 +15,7 @@ import Bitsbacker.Data.User (UserId(..))
 
 import Data.Text (Text)
 
+import qualified Data.HashMap.Lazy as M
 import qualified Data.Text as T
 
 data TierType = Standard
@@ -37,7 +38,8 @@ data TierStats = TierStats {
     deriving Show
 
 data Tier = Tier {
-      tierDef   :: TierDef
+      tierId   :: Int
+    , tierDef   :: TierDef
     , tierStats :: TierStats
     }
     deriving Show
@@ -67,7 +69,10 @@ instance ToJSON TierStats where
 instance ToJSON Tier where
     toJSON Tier{..} =
         case (toJSON tierDef, toJSON tierStats) of
-          (Object d, Object s) -> Object (d <> s)
+          (Object d, Object s) ->
+              let obj = d <> s
+                  tid = M.insert "tier_id" (toJSON tierId) obj
+              in Object tid
           _ -> Object mempty
 
 
@@ -138,16 +143,17 @@ instance FromRow TierDef where
 getTiers :: MVar Connection -> UserId -> IO [Tier]
 getTiers mvconn (UserId userId) = do
   let tdFields = T.intercalate ", " (map ("t."<>) tierDefFields)
-      q = "SELECT "<>tdFields<>", count(s.tier_id) as subs "
+      q = "SELECT t.id, "<>tdFields<>", count(s.tier_id) as subs "
         <>"FROM tiers t LEFT JOIN subscriptions s "
         <>" ON s.tier_id = t.id AND s.valid_until < CURRENT_TIMESTAMP "
         <>"WHERE t.user_id = ? "
         <>"GROUP BY " <> tdFields
   withMVar mvconn $ \conn -> do
     tdefs <- query conn (Query q) (Only userId)
-    return $ flip map tdefs $ \(td@TierDef{} :. ts@TierStats{}) ->
+    return $ flip map tdefs $ \(Only tid :. td@TierDef{} :. ts@TierStats{}) ->
       Tier {
         tierDef   = td
+      , tierId    = tid
       , tierStats = ts
     }
 
@@ -156,9 +162,9 @@ newTier :: UserId -> TierDef
 newTier UserId{..} =
     TierDef {
       tierDescription = ""
-    , tierQuota = Nothing
-    , tierUserId = getUserId
-    , tierAmountFiat = 0
+    , tierQuota       = Nothing
+    , tierUserId      = getUserId
+    , tierAmountFiat  = 0
     , tierAmountMSats = msats 0
-    , tierType = Standard
+    , tierType        = Standard
     }

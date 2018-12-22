@@ -61,7 +61,10 @@ testTierData userId =
 testTiers :: UserId -> [Tier]
 testTiers userId =
     flip map (testTierData userId) $ \tdef ->
-        Tier { tierDef = tdef, tierStats = TierStats 0 }
+        Tier { tierDef = tdef
+             , tierId = 1
+             , tierStats = TierStats 0
+             }
 
 testData :: IO ()
 testData = do
