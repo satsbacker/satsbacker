@@ -20,8 +20,15 @@ import qualified Data.Vector as V
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Lazy as BL
 
-import Bitcoin.Denomination (MSats(..))
+import Bitcoin.Denomination (MSats(..), toBits, showBits)
 import Network.Lightning.Bolt11
+
+
+infixr 5 ?:
+(?:) :: Maybe a -> [a] -> [a]
+Just x  ?: xs = x : xs
+Nothing ?: xs = xs
+
 
 newtype NewInvoice = NewInvoice { getNewInvoice :: Text }
     deriving (Show)
@@ -32,15 +39,21 @@ instance FromJSON NewInvoice where
 
 instance ToJSON Invoice where
     toJSON Invoice{..} =
-        object $ [ "id"          .= invoiceId
-                 , "rhash"       .= invoicePaymentHash
-                 , "payreq"      .= invoicePaymentRequest
-                 , "status"      .= invoiceStatus
-                 , "description" .= invoiceDescription
-                 , "expires_at"  .= invoiceExpires
-                 , "timestamp"   .= invoiceTimestamp
-                 ] ++ maybe [] (:[])
-                        ((\(MSats msat) -> "msatoshi" .= msat) <$> invoiceMSat)
+        object $
+          ((\(MSats msat) -> "msatoshi" .= msat) <$> invoiceMSat) ?:
+          ((\msat -> "amount_bits" .= showBits (toBits msat)) <$> invoiceMSat) ?:
+          [ "id"          .= invoiceId
+          , "rhash"       .= invoicePaymentHash
+          , "payreq"      .= invoicePaymentRequest
+          , "status"      .= invoiceStatus
+          , "description" .= invoiceDescription
+          , "expiry"      .= invoiceExpires
+          , "expires_at"  .= (invoiceTimestamp + invoiceExpires)
+          , "timestamp"   .= invoiceTimestamp
+          ]
+
+-- renderInvoice :: DisplayConfig -> Value
+-- renderInvoice = error "implement me"
 
 defaultExpiry :: Int
 defaultExpiry = 3600

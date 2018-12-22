@@ -9,9 +9,50 @@
 <body>
     {{>header}}
     <div class="hero">
-        <h1>Checkout</h1>
+        <h1>Back {{user.name}} for <b>{{invoice.amount_bits}}</b> bits per month</h1>
     </div>
     <div class="container">
+        <div class="row">
+            <div class="four columns">
+                <label for="expiry">Expires At</label>
+            </div>
+            <div class="eight columns">
+                <span class="timestamp">{{invoice.expires_at}}</span>
+            </div>
+        </div>
+        <div class="row">
+            <div class="four columns">
+                <label for="description">Description</label>
+            </div>
+            <div class="eight columns">
+                {{invoice.description}}
+            </div>
+        </div>
+        <div class="row">
+            <label for="invoice">Payment Request</label>
+            <input class="u-full-width" type="text" readonly value="{{invoice.payreq}}"></input>
+        </div>
+        <div class="row">
+            <div class="four columns">
+                <label for="status">Status</label>
+            </div>
+            <div class="eight columns">
+                Waiting for payment...
+            </div>
+        </div>
     </div>
 </body>
+<script>
+ function formatDate(d) {
+     var hours = d.getHours();
+     var mins = d.getMinutes();
+     return d.toLocaleDateString() + " " + hours + ":" + mins;
+ }
+
+ (function(){
+     document.querySelectorAll(".timestamp").forEach(function(ts) {
+         ts.innerHTML = formatDate(new Date(+ts.innerHTML * 1000));
+     });
+ })();
+</script>
 </html>

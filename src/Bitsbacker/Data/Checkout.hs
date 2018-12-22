@@ -20,12 +20,13 @@ import Bitsbacker.Data.Tiers
 import Bitsbacker.Data.User
 import Bitsbacker.Config
 import Invoicing
-import Bitcoin.Denomination (MSats, msats)
+import Bitcoin.Denomination (MSats, msats, toBits, showBits)
 
 import Network.RPC.CLightning.Invoice
 import Network.RPC.Config (SocketConfig(..))
 
 import Data.Text (Text)
+import qualified Data.Text as T
 
 data CheckoutPage = CheckoutPage
   { checkoutTier    :: Tier
@@ -73,6 +74,12 @@ safeGetInvoice cfgRPC msat desc = do
       Left err  -> Left (InvoiceCreationFailed (show err))
       Right inv -> Right inv
 
+-- TODO: denominationdisplay
+mkInvoiceDesc :: Username -> MSats -> Text -> Text
+mkInvoiceDesc (Username name) msats desc =
+    "Back " <> name <> " at " <> T.pack amountBits <> " bits per month: " <> desc
+    where
+      amountBits = showBits (toBits msats) 
 
 mkCheckoutPage :: Config -> TierId -> IO (Either CheckoutError CheckoutPage)
 mkCheckoutPage Config{..} tierId = do
@@ -82,11 +89,13 @@ mkCheckoutPage Config{..} tierId = do
     Right tier -> do
       let tdef = tierDef tier
           uid  = tierUserId tdef
-          msat = tierAmountMSats tdef
-          desc = tierDescription tdef
       muser    <- withMVar cfgConn $ \conn -> getUserById conn uid
       user     <- maybe (fail $ "missing user " ++ show uid) return muser
-      einvoice <- safeGetInvoice cfgRPC msat desc
+      let msat    = tierAmountMSats tdef
+          tdesc   = tierDescription tdef
+          backee  = userName user
+          invDesc = mkInvoiceDesc backee msat tdesc
+      einvoice <- safeGetInvoice cfgRPC msat invDesc
       return $
         case einvoice of
           Left  err -> Left err
