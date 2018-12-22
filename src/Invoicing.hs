@@ -2,6 +2,7 @@
 
 module Invoicing
     ( invoiceRoutes
+    , newInvoice
     ) where
 
 import Control.Applicative (optional)

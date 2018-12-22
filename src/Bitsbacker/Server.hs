@@ -2,7 +2,7 @@
 
 module Bitsbacker.Server where
 
-import Control.Concurrent (MVar)
+import Control.Concurrent (MVar, withMVar)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
 import Data.Foldable (foldl')
@@ -13,6 +13,7 @@ import Lucid
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Static (staticPolicy, addBase)
 import System.Environment (lookupEnv)
+import System.IO (stderr, hPutStrLn)
 import Text.Mustache
 import Text.Read (readMaybe)
 import Web.Scotty
@@ -24,6 +25,7 @@ import Bitsbacker.Config
 import Bitsbacker.Data.User
 import Bitsbacker.Data.Tiers
 import Bitsbacker.Data.TiersPage
+import Bitsbacker.Data.Checkout
 import Bitsbacker.Html
 
 home :: Html ()
@@ -71,7 +73,7 @@ simplePage templ val = html page
 withUser :: MVar Connection -> ActionM (UserId, User)
 withUser mvconn = do
   username <- param "user"
-  muser <- liftIO $ getUser mvconn (Username username)
+  muser <- liftIO $ withMVar mvconn $ \conn -> getUser conn (Username username)
   case muser of
     Nothing -> next
     Just user -> return user
@@ -80,19 +82,40 @@ withUser mvconn = do
 tiersPage :: MVar Connection -> Template -> ActionM ()
 tiersPage mvconn templ = do
   (userId, user) <- withUser mvconn
-  tiers <- liftIO (getTiers mvconn userId)
+  tiers <- liftIO $ withMVar mvconn $ \conn -> getTiers conn userId
   let tpage = mkTiersPage user 2 tiers
       (_warnings, rendered) = renderMustacheW templ (toJSON tpage)
   html rendered
 
 
+checkoutErrorPage :: CheckoutError -> ActionM ()
+checkoutErrorPage = raise . describeCheckoutError
+
+
+logError err = hPutStrLn stderr err
+
+
+checkout :: Config -> Template -> ActionM ()
+checkout cfg@Config{..} templ = do
+  itierId <- param "tier_id"
+  let tierId = TierId itierId
+  echeckoutPage <- liftIO (mkCheckoutPage cfg tierId)
+  case echeckoutPage of
+    Left err -> do liftIO $ logError (show err)
+                   checkoutErrorPage err
+    Right checkoutPage -> do
+      let checkoutJson = toJSON checkoutPage
+          (_w, rendered) = renderMustacheW templ checkoutJson
+      html rendered
+
 routes :: Config -> Template -> ScottyM ()
 routes cfg@Config{..} templates = do
-  get  "/"           (simplePage (t "home") ())
-  get  "/signup"     (content signup)
-  post "/signup"     postSignup
-  get  "/:user"      (lookupUserPage cfgConn (t "user"))
-  get  "/back/:user" (tiersPage cfgConn (t "back"))
+  get  "/"                  (simplePage (t "home") ())
+  get  "/signup"            (content signup)
+  post "/signup"            postSignup
+  get  "/:user"             (lookupUserPage cfgConn (t "user"))
+  get  "/back/:user"        (tiersPage cfgConn (t "back"))
+  get  "/checkout/:tier_id" (checkout cfg (t "checkout"))
   invoiceRoutes cfg
   middleware (static "public")
   where

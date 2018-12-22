@@ -125,16 +125,24 @@ createUser (Plaintext password) = do
              , userMaking         = "cool stuff"
            }
 
-getUser :: MVar Connection -> Username -> IO (Maybe (UserId, User))
-getUser mvconn username = do
-  let fields = T.intercalate ", " userFields
-      q = "SELECT id,"<>fields<>" FROM users WHERE name = ? LIMIT 1"
-  withMVar mvconn $ \conn -> withTransaction conn $ do
-    muser <- query conn (Query q) (Only username)
-    case listToMaybe muser of
-      Nothing   -> return Nothing
-      Just (Only userId :. user) ->
-        return (Just (UserId userId, user))
+commaUserFields :: Text
+commaUserFields =
+    T.intercalate ", " userFields
+
+getUserById :: Connection -> UserId -> IO (Maybe User)
+getUserById conn (UserId userId) = do
+  let q = "SELECT "<>commaUserFields<>" FROM USERS WHERE id = ? LIMIT 1"
+  users <- query conn (Query q) (Only userId)
+  return (listToMaybe users)
+
+getUser :: Connection -> Username -> IO (Maybe (UserId, User))
+getUser conn username = do
+  let q = "SELECT id,"<>commaUserFields<>" FROM users WHERE name = ? LIMIT 1"
+  muser <- query conn (Query q) (Only username)
+  case listToMaybe muser of
+    Nothing   -> return Nothing
+    Just (Only userId :. user) ->
+      return (Just (UserId userId, user))
 
 
 getUserStats :: MVar Connection -> UserId -> IO UserStats
