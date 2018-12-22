@@ -23,6 +23,7 @@ import Bitsbacker.Templates
 import Bitsbacker.Config
 import Bitsbacker.Data.User
 import Bitsbacker.Data.Tiers
+import Bitsbacker.Data.TiersPage
 import Bitsbacker.Html
 
 home :: Html ()
@@ -59,11 +60,12 @@ lookupUserPage mvconn templ = do
       (_warnings, rendered) = renderMustacheW templ (toJSON userPage)
   html rendered
 
-       
+
 simplePage :: ToJSON a => Template -> a -> ActionM ()
 simplePage templ val = html page
   where
     (_warnings, page) = renderMustacheW templ (toJSON val)
+
 
 
 withUser :: MVar Connection -> ActionM (UserId, User)
@@ -73,45 +75,6 @@ withUser mvconn = do
   case muser of
     Nothing -> next
     Just user -> return user
-
-data TiersPage = TiersPage {
-      tiersPageUser   :: User
-    , tiersRows       :: [TierCols]
-    , tiersColumnWidth :: Text
-    , tiersNumColumns  :: Int
-    }
-
-instance ToJSON TiersPage where
-    toJSON TiersPage{..} =
-        object [ "tiers"    .= tiersRows
-               , "user"     .= tiersPageUser
-               , "colwidth" .= tiersColumnWidth
-               , "ncolumns" .= tiersNumColumns
-               ]
-
-mkTiersPage :: User -> Int -> [Tier] -> TiersPage
-mkTiersPage user cols tiers =
-  TiersPage {
-    tiersPageUser   = user
-  , tiersRows       = map TierCols rs
-  , tiersNumColumns = cols
-  , tiersColumnWidth =
-      case cols of
-        2 -> "one-half"
-        3 -> "one-third"
-        4 -> "one-fourth"
-        _ -> ""
-  }
-  where
-    rs :: [[Tier]]
-    rs = foldr folder [] tiers
-    folder tier rows =
-        case rows of
-          [] -> [[tier]]
-          row:rest
-            | length row == cols -> [tier] : row : rest
-            | otherwise          -> (tier:row) : rest
-
 
 
 tiersPage :: MVar Connection -> Template -> ActionM ()

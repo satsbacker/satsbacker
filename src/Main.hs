@@ -36,7 +36,7 @@ mainWith args = do
 
 
 testTierData :: UserId -> [TierDef]
-testTierData userId = 
+testTierData userId =
   let
       newT f b d =
         (newTier userId) {
