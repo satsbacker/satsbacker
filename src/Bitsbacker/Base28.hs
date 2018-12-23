@@ -1,19 +1,18 @@
+{-# LANGUAGE TemplateHaskell #-}
 -- base32string package
 
-module Bitsbacker.Base32 ( Base32String
-                         , b32Encode
-                         , b32Decode
+module Bitsbacker.Base28 ( b28Encode
+                         , b28Decode
                          ) where
 
-import           Control.Applicative   (pure, (<$>))
+import           Control.Applicative   ((<$>))
 import           Control.Monad         (liftM)
 
 import           Data.Bits             (shiftL, shiftR, (.|.))
 import           Data.Char             (chr, ord)
 import           Data.List             (unfoldr)
 
-import           Data.Maybe            (fromJust, fromMaybe, isJust,
-                                        listToMaybe)
+import           Data.Maybe            (fromJust, isJust, listToMaybe)
 
 import           Data.String           (fromString)
 import           Data.Word             (Word8)
@@ -21,67 +20,56 @@ import           Numeric               (readInt, showIntAtBase)
 
 import qualified Data.ByteString       as BS
 import qualified Data.ByteString.Char8 as BS8
-import qualified Data.ByteString.Lazy  as BSL
 
-import qualified Data.Text             as T
-import qualified Data.Text.Encoding    as TE
-
--- | Represents a Base32 string. Guarantees that all characters it contains
---   are valid base32 characters.
-data Base32String =
-  Base32String BS.ByteString
-  deriving ( Show, Eq, Ord )
+w82c :: Word8 -> Char
+w82c = toEnum . fromIntegral
 
 table :: BS.ByteString
-table = BS.pack
-        $  [65..90]
+table = BS.pack $ filter (not . (`elem` ("I10O" :: [Char])) . w82c) $
+           [65..90]
         ++ [50..55]
 
-isValidBase32 :: Word8 -> Bool
-isValidBase32 c =
-  c `BS.elem` table
+b28 :: Word8 -> Word8
+b28 i = BS.index table (fromIntegral i)
 
-b32 :: Word8 -> Word8
-b32 i = BS.index table (fromIntegral i)
+b28' :: Word8 -> Maybe Word8
+b28' w = fromIntegral <$> BS.elemIndex w table
 
-b32' :: Word8 -> Maybe Word8
-b32' w = fromIntegral <$> BS.elemIndex w table
-
-b32EncodeInt :: Integer
+b28EncodeInt :: Integer
              -> BS.ByteString
-b32EncodeInt i =
-    fromString $ showIntAtBase (32 :: Integer) f (fromIntegral i) ""
+b28EncodeInt i =
+    fromString $ showIntAtBase (28 :: Integer) f (fromIntegral i) ""
   where
-    f = chr . fromIntegral . b32 . fromIntegral
+    f = chr . fromIntegral . b28 . fromIntegral
 
-b32DecodeInt :: BS.ByteString
+b28DecodeInt :: BS.ByteString
              -> Maybe Integer
-b32DecodeInt s = case go of
+b28DecodeInt s = case go of
     Just (r,[]) -> Just r
     _           -> Nothing
   where
-    c = b32' . fromIntegral . ord
+    c = b28' . fromIntegral . ord
     p = isJust . c
     f = fromIntegral . fromJust . c
     go = listToMaybe $ readInt 32 p f (BS8.unpack s)
 
-b32Encode :: BS.ByteString
+b28Encode :: BS.ByteString
           -> BS.ByteString
-b32Encode input = BS.append l r
+b28Encode input = BS.append l r
   where
     (z, b) = BS.span (== 0) input
-    l = BS.map b32 z -- preserve leading 0's
+    l = BS.map b28 z -- preserve leading 0's
     r | BS.null b = BS.empty
-      | otherwise = b32EncodeInt (bsToInteger b)
+      | otherwise = b28EncodeInt (bsToInteger b)
 
-b32Decode :: BS.ByteString
+b28Decode :: BS.ByteString
           -> Maybe BS.ByteString
-b32Decode input = liftM (BS.append prefix) r
+b28Decode input = liftM (BS.append prefix) r
   where
-    (z,b)  = BS.span (== b32 0) input
-    prefix = BS.map (fromJust . b32') z -- preserve leading 1's
+    (z,b)  = BS.span (== b28 0) input
+    prefix = BS.map (fromJust . b28') z -- preserve leading 1's
     r | BS.null b = Just BS.empty
-      | otherwise = integerToBS <$> b32DecodeInt b
+      | otherwise = integerToBS <$> b28DecodeInt b
 
 -- | Decode a big endian Integer from a bytestring
 bsToInteger :: BS.ByteString -> Integer

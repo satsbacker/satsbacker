@@ -6,7 +6,6 @@ module Bitsbacker.UniqueId where
 
 import Data.Int (Int64)
 import Data.Bits ((.|.), shiftL)
-import Data.Word (Word8)
 import Data.Foldable (foldl')
 import System.Entropy (getEntropy)
 import qualified Data.ByteString.Char8 as B8
@@ -15,7 +14,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Builder as BUIDL
 import Data.ByteString (ByteString)
 
-import Bitsbacker.Base32 (b32Encode, b32Decode)
+import Bitsbacker.Base28 (b28Encode)
 
 newtype UniqueId = UniqueId { getUniqueId :: Int64 }
 
@@ -24,7 +23,7 @@ instance Show UniqueId where
 
 encodeUniqueId :: UniqueId -> ByteString
 encodeUniqueId (UniqueId uuid) =
-  b32Encode uuidBytes
+  b28Encode uuidBytes
   where
     uuidBytes = LBS.toStrict (BUIDL.toLazyByteString (BUIDL.int64BE uuid))
 
