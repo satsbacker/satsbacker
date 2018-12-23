@@ -21,7 +21,7 @@ import Web.Scotty
 import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as B8
 
-import Bitsbacker.UniqueId (newUniqueId, encodeUniqueId)
+import Bitsbacker.InvoiceId (newInvoiceId, encodeInvoiceId)
 import Bitsbacker.Config
 
 
@@ -33,8 +33,8 @@ import Network.RPC (rpc)
 
 newInvoice :: SocketConfig -> MSats -> Text -> IO Invoice
 newInvoice cfg (MSats int) description = do
-  invId <- liftIO newUniqueId
-  let label = encodeUniqueId invId
+  invId <- liftIO newInvoiceId
+  let label = encodeInvoiceId invId
       args  = [show int, B8.unpack label, T.unpack description]
   newInv <- rpc cfg "invoice" args
   either fail return (fromNewInvoice (decodeUtf8 label) newInv)
