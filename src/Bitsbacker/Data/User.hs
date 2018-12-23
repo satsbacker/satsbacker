@@ -4,7 +4,7 @@
 
 module Bitsbacker.Data.User where
 
-import Control.Concurrent (MVar, withMVar)
+import Control.Concurrent (MVar)
 import Crypto.PasswordStore (makePassword)
 import Data.Aeson
 import Data.ByteString (ByteString)

@@ -8,19 +8,17 @@ module Bitsbacker.Data.Checkout
     , CheckoutError(..)
     ) where
 
-import Control.Concurrent.MVar (withMVar, MVar(..))
+import Control.Concurrent.MVar (withMVar, MVar)
 import Control.Exception (try, SomeException)
 import Data.Aeson
-import Data.Maybe (fromMaybe)
 import Data.String (IsString)
 import Database.SQLite.Simple (Connection)
-import System.IO (stderr, hPutStrLn)
 
 import Bitsbacker.Data.Tiers
 import Bitsbacker.Data.User
 import Bitsbacker.Config
 import Invoicing
-import Bitcoin.Denomination (MSats, msats, toBits, showBits)
+import Bitcoin.Denomination (MSats, toBits, showBits)
 
 import Network.RPC.CLightning.Invoice
 import Network.RPC.Config (SocketConfig(..))
@@ -52,9 +50,6 @@ describeCheckoutError checkoutErr =
       InvoiceCreationFailed _ -> "There was an error creating the invoice"
       InvalidTier _ -> "The selected tier is unavailable"
 
-logErr e = hPutStrLn stderr e
-
-
 safeGetTierById :: MVar Connection -> TierId -> IO (Either CheckoutError Tier)
 safeGetTierById mvconn tierId = do
   etier_ :: Either SomeException (Maybe Tier) <-
@@ -64,11 +59,11 @@ safeGetTierById mvconn tierId = do
   return etier
 
 
-safeGetInvoice :: MVar SocketConfig -> MSats -> Text
+safeGetInvoice :: SocketConfig -> MSats -> Text
                -> IO (Either CheckoutError Invoice)
 safeGetInvoice cfgRPC msat desc = do
   einvoice :: Either SomeException Invoice <-
-                try $ withMVar cfgRPC $ \cfg -> newInvoice cfg msat desc
+                try $ newInvoice cfgRPC msat desc
   return $
     case einvoice of
       Left err  -> Left (InvoiceCreationFailed (show err))
@@ -76,10 +71,10 @@ safeGetInvoice cfgRPC msat desc = do
 
 -- TODO: denominationdisplay
 mkInvoiceDesc :: Username -> MSats -> Text -> Text
-mkInvoiceDesc (Username name) msats desc =
+mkInvoiceDesc (Username name) msat desc =
     "Back " <> name <> " at " <> T.pack amountBits <> " bits per month: " <> desc
     where
-      amountBits = showBits (toBits msats) 
+      amountBits = showBits (toBits msat) 
 
 mkCheckoutPage :: Config -> TierId -> IO (Either CheckoutError CheckoutPage)
 mkCheckoutPage Config{..} tierId = do

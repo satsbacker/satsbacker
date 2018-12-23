@@ -1,35 +1,54 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Bitsbacker.UniqueId where
 
-import Data.UUID (UUID)
-import qualified Data.UUID as UUID
-import qualified Data.UUID.V4 as UUID
-import qualified Data.ByteString.Char8 as BS
+import Data.Int (Int64)
+import Data.Bits ((.|.), shiftL)
+import Data.Word (Word8)
+import Data.Foldable (foldl')
+import System.Entropy (getEntropy)
+import qualified Data.ByteString.Char8 as B8
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import Data.ByteString.Base58
+import qualified Data.ByteString.Builder as BUIDL
 import Data.ByteString (ByteString)
 
-newtype UniqueId = UniqueId { getUniqueId :: UUID }
+import Bitsbacker.Base32 (b32Encode, b32Decode)
+
+newtype UniqueId = UniqueId { getUniqueId :: Int64 }
 
 instance Show UniqueId where
-  show invoiceId = BS.unpack (encodeUniqueId invoiceId)
+  show invoiceId = B8.unpack (encodeUniqueId invoiceId)
 
 encodeUniqueId :: UniqueId -> ByteString
 encodeUniqueId (UniqueId uuid) =
-  encodeBase58 bitcoinAlphabet uuidBytes
+  b32Encode uuidBytes
   where
-    uuidBytes = LBS.toStrict (UUID.toByteString uuid)
+    uuidBytes = LBS.toStrict (BUIDL.toLazyByteString (BUIDL.int64BE uuid))
+
+randInt :: IO Int64
+randInt = do
+    bs <- getEntropy 8
+    return (w8int64 bs)
+
+w8int64 :: ByteString -> Int64
+w8int64 bytes = foldl' decodeInt 0 (BS.zip "\0\1\2\3\4\5\6\7\8" bytes)
+  where
+    decodeInt !n (i, byte) =
+        n .|. fromIntegral byte `shiftL` (fromIntegral i * 8)
 
 newUniqueId :: IO UniqueId
-newUniqueId = fmap UniqueId UUID.nextRandom
+newUniqueId = fmap UniqueId randInt
 
--- λ> replicateM 5 newInvoiceId >>= mapM_ print
--- CuLhGEF2ChmDS5mW2WG7qB
--- UpgygGB5GecUcuYmqRKki9
--- LrHtTnwZra3Udr6uzBXJTC
--- 42f2g5Rw5NBty2KrHmzq4n
--- VnFPcHXKMRzaLrfuSp9CQm
+-- λ> replicateM 5 newUniqueId >>= mapM_ print
+-- C5YYNAS2UPGPR
+-- N7XMRMMMQY3SM
+-- CNUWBCP3QZ7DU
+-- KLP5QWNBMR2P6
+-- DQWK3M2XMHZLV
 
-decodeUniqueId :: ByteString -> Maybe UUID
-decodeUniqueId bs =
-  UUID.fromByteString =<< fmap LBS.fromStrict (decodeBase58 bitcoinAlphabet bs)
+-- decodeUniqueId :: ByteString -> Maybe UUID
+-- decodeUniqueId bs =
+--   fmap LBS.fromStrict (b32Decode bs) >>= UUID.fromByteString

@@ -17,7 +17,7 @@
                 <label for="expiry">Expires At</label>
             </div>
             <div class="eight columns">
-                <span class="timestamp">{{invoice.expires_at}}</span>
+                <p><span class="timestamp">{{invoice.expires_at}}</span></p>
             </div>
         </div>
         <div class="row">
@@ -25,7 +25,7 @@
                 <label for="description">Description</label>
             </div>
             <div class="eight columns">
-                {{invoice.description}}
+                <p>{{invoice.description}}</p>
             </div>
         </div>
         <div class="row">
@@ -34,10 +34,18 @@
         </div>
         <div class="row">
             <div class="four columns">
+                <label for="id">Invoice Id</label>
+            </div>
+            <div class="eight columns">
+                <p>{{invoice.id}}</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="four columns">
                 <label for="status">Status</label>
             </div>
             <div class="eight columns">
-                Waiting for payment...
+                <p>Waiting for payment...</p>
             </div>
         </div>
     </div>

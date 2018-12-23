@@ -7,7 +7,6 @@ import Data.Maybe (listToMaybe)
 import Database.SQLite.Simple
 import Database.SQLite.Simple.ToField
 import Database.SQLite.Simple.FromField
-import Control.Concurrent.MVar
 import Data.Aeson
 
 import Bitcoin.Denomination

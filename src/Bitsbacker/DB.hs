@@ -54,7 +54,10 @@ migrations = [
      \ valid_until INTEGER NOT NULL,\
      \ tier_id INTEGER NOT NULL,\
      \ created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP\
-     \)"
+     \)", -- 5
+
+     "CREATE TABLE payindex (payindex INTEGER)", -- 6
+     "INSERT INTO payindex (payindex) VALUES (0)" -- 7
   ]
 
 hasVersionTable :: Connection -> IO Bool

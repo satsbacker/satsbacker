@@ -5,15 +5,12 @@ module Bitsbacker.Server where
 import Control.Concurrent (MVar, withMVar)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
-import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe)
-import Data.Text (Text)
 import Database.SQLite.Simple (Connection)
 import Lucid
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Static (staticPolicy, addBase)
 import System.Environment (lookupEnv)
-import System.IO (stderr, hPutStrLn)
 import Text.Mustache
 import Text.Read (readMaybe)
 import Web.Scotty
@@ -21,6 +18,7 @@ import Web.Scotty
 import Invoicing
 
 import Bitsbacker.Templates
+import Bitsbacker.Logging
 import Bitsbacker.Config
 import Bitsbacker.Data.User
 import Bitsbacker.Data.Tiers
@@ -90,9 +88,6 @@ tiersPage mvconn templ = do
 
 checkoutErrorPage :: CheckoutError -> ActionM ()
 checkoutErrorPage = raise . describeCheckoutError
-
-
-logError err = hPutStrLn stderr err
 
 
 checkout :: Config -> Template -> ActionM ()

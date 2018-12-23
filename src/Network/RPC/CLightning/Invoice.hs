@@ -7,6 +7,7 @@
 module Network.RPC.CLightning.Invoice
     ( Invoice(..)
     , NewInvoice(..)
+    , WaitInvoice(..)
     , CLInvoice(..)
     , fromNewInvoice
     ) where
@@ -29,24 +30,37 @@ infixr 5 ?:
 Just x  ?: xs = x : xs
 Nothing ?: xs = xs
 
+newtype WaitInvoice = WaitInvoice { getWaitInvoice :: (Int, CLInvoice) }
+    deriving Show
 
 newtype NewInvoice = NewInvoice { getNewInvoice :: Text }
-    deriving (Show)
+    deriving Show
+
+instance FromJSON WaitInvoice where
+    parseJSON v@(Object obj) = fmap WaitInvoice $
+        (,) <$> obj .: "pay_index"
+            <*> parseJSON v
+    parseJSON _ = fail "expected object when parsing WaitInvoice"
 
 instance FromJSON NewInvoice where
     parseJSON (Object obj) = NewInvoice <$> obj .: "bolt11"
     parseJSON _            = fail "NewInvoice: expected bolt11 field"
+
+guardEmpty :: (Eq t, Monoid t) => (t -> a) -> t -> Maybe a
+guardEmpty _ v | v == mempty = Nothing
+guardEmpty f txt             = Just (f txt)
 
 instance ToJSON Invoice where
     toJSON Invoice{..} =
         object $
           ((\(MSats msat) -> "msatoshi" .= msat) <$> invoiceMSat) ?:
           ((\msat -> "amount_bits" .= showBits (toBits msat)) <$> invoiceMSat) ?:
+          (fmap ("paid_at" .=)     invoicePaidAt) ?:
+          (guardEmpty ("description" .=) =<< invoiceDescription) ?:
+          (guardEmpty ("payreq" .=) =<< invoicePaymentRequest) ?:
           [ "id"          .= invoiceId
           , "rhash"       .= invoicePaymentHash
-          , "payreq"      .= invoicePaymentRequest
           , "status"      .= invoiceStatus
-          , "description" .= invoiceDescription
           , "expiry"      .= invoiceExpires
           , "expires_at"  .= (invoiceTimestamp + invoiceExpires)
           , "timestamp"   .= invoiceTimestamp
@@ -61,11 +75,12 @@ defaultExpiry = 3600
 data Invoice = Invoice {
       invoiceId             :: Text
     , invoicePaymentHash    :: Text
-    , invoicePaymentRequest :: Text
+    , invoicePaymentRequest :: Maybe Text
     , invoiceMSat           :: Maybe MSats
     , invoiceStatus         :: Text
-    , invoiceDescription    :: Text
+    , invoiceDescription    :: Maybe Text
     , invoiceExpires        :: Int
+    , invoicePaidAt         :: Maybe Int
     , invoiceTimestamp      :: Int
     }
     deriving Show
@@ -78,11 +93,12 @@ defaultInvoice =
     Invoice {
       invoiceId             = ""
     , invoicePaymentHash    = ""
-    , invoicePaymentRequest = ""
+    , invoicePaymentRequest = Nothing
     , invoiceMSat           = Nothing
     , invoiceStatus         = "unpaid"
-    , invoiceDescription    = ""
+    , invoiceDescription    = Nothing
     , invoiceExpires        = defaultExpiry
+    , invoicePaidAt         = Nothing
     , invoiceTimestamp      = 0
     }
 
@@ -98,7 +114,7 @@ fromBolt11 invId rawBolt11 Bolt11{..} =
     initInvoice =
         defaultInvoice {
           invoiceId             = invId
-        , invoicePaymentRequest = rawBolt11
+        , invoicePaymentRequest = Just rawBolt11
         , invoiceMSat           = fmap bolt11Msats (bolt11Amount bolt11HRP)
         , invoiceTimestamp      = bolt11Timestamp
         }
@@ -110,7 +126,7 @@ fromBolt11 invId rawBolt11 Bolt11{..} =
                 hexStr = BS.toLazyByteString (BS.byteStringHex bs)
             in
                 i { invoicePaymentHash = decodeUtf8 (BL.toStrict hexStr) }
-        Description txt -> i { invoiceDescription = txt }
+        Description txt -> i { invoiceDescription = Just txt }
         Expiry t        -> i { invoiceExpires = t }
         _               -> i
         -- TODO: more invoice data from bolt11
@@ -120,11 +136,12 @@ parseCLInvoice :: Object -> Parser Invoice
 parseCLInvoice obj =
     Invoice <$> obj .: "label"
             <*> obj .: "payment_hash"
-            <*> obj .: "bolt11"
+            <*> obj .:? "bolt11"
             <*> (fmap (fmap MSats) (obj .:? "msatoshi"))
             <*> obj .: "status"
-            <*> obj .: "description"
+            <*> obj .:? "description"
             <*> obj .: "expires_at"
+            <*> obj .:? "paid_at"
             <*> pure defaultExpiry
 
 instance FromJSON CLInvoice where
