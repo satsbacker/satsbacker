@@ -36,9 +36,9 @@ migrations = [
      \ created_at INTEGER NOT_NULL DEFAULT CURRENT_TIMESTAMP, \
      \ permissions INTEGER) ",    -- 2
 
-     "CREATE TABLE invoices (invoiceId BLOB PRIMARY KEY,\
-     \ expiry INTEGER,\
-     \ state INTEGER)",       -- 3
+     "CREATE TABLE invoices (invoiceId TEXT PRIMARY KEY,\
+     \ tier_id INTEGER,\
+     \ email TEXT)", -- 3
 
      "CREATE TABLE tiers (id INTEGER PRIMARY KEY,\
      \ user_id INTEGER NOT NULL,\

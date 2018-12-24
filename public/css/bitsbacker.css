@@ -4,10 +4,23 @@
     padding: 1em;
 }
 
+.centered {
+    text-align: center;
+}
+
 .super {
     margin: 10vh 0 10vh 0;
     font-size: 1.5em;
     text-align: center;
+}
+
+input.payreq {
+    margin-bottom: 0;
+}
+
+.peer {
+    color: #888;
+    font-size: 0.9em;
 }
 
 .header .beta {

@@ -14,6 +14,7 @@ import Bitcoin.Denomination
 import Bitsbacker.Cli
 import Bitsbacker.Config
 import Bitsbacker.Data.User
+import Bitsbacker.Data.Email
 import Bitsbacker.Data.Tiers
 import Bitsbacker.DB.Table (insert)
 

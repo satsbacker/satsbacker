@@ -21,8 +21,8 @@ import Data.List.NonEmpty (NonEmpty)
 import Bitcoin.Network
 import Bitsbacker.DB
 import Bitsbacker.Logging
+import Bitsbacker.Data.Invoice
 
-import Network.RPC.CLightning.Invoice
 import Network.RPC
 
 import Network.RPC.Config (SocketConfig(..))
@@ -75,6 +75,7 @@ instance ToJSON Config where
           object
             [ "network"    .= network
             , "is_testnet" .= (network == Testnet)
+            , "peer"       .= showLnPeer cfgLnConfig
             ]
 
 

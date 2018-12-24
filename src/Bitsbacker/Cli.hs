@@ -10,6 +10,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import Bitsbacker.Data.User
+import Bitsbacker.Data.Email
 import Bitsbacker.Server
 import Bitsbacker.Config
 import Bitsbacker.DB.Table (insert)

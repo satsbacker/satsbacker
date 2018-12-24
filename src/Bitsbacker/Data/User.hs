@@ -17,11 +17,9 @@ import Database.SQLite.Simple.FromField
 import Database.SQLite.Simple.ToField
 
 import Bitsbacker.DB.Table (Table(..))
+import Bitsbacker.Data.Email
 
 import qualified Data.Text as T
-
-newtype Email = Email { getEmail :: Text }
-    deriving (Show, Eq, Ord, ToField, FromField)
 
 newtype Username = Username { getUsername :: Text }
     deriving (Show, Eq, Ord, ToField, FromField)

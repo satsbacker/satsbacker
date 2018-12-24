@@ -11,7 +11,7 @@ import Data.Text (Text)
 import Network.RPC
 import Network.RPC.CLightning.Peer
 import Network.RPC.CLightning.Output
-import Network.RPC.CLightning.Invoice
+import Bitsbacker.Data.Invoice
 
 listpeers :: MonadIO m => SocketConfig -> m [Peer]
 listpeers cfg = getPeersResp <$> rpc_ cfg "listpeers"
@@ -24,6 +24,10 @@ newaddr cfg addrtype = do
 
 listfunds :: MonadIO m => SocketConfig -> m [Output]
 listfunds cfg = listFundsOutputs <$> rpc_ cfg "listfunds"
+
+listinvoices :: MonadIO m => SocketConfig -> Text -> m (Maybe Invoice)
+listinvoices cfg invId =
+  fmap getCLInvoices <$> rpc cfg "listinvoices" [invId]
 
 waitinvoice :: MonadIO m => SocketConfig -> Text -> m (Maybe Invoice)
 waitinvoice cfg invId =

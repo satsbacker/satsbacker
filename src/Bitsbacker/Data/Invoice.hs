@@ -4,22 +4,29 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Network.RPC.CLightning.Invoice
+module Bitsbacker.Data.Invoice
     ( Invoice(..)
     , NewInvoice(..)
+    , InvoiceRef(..)
     , WaitInvoice(..)
     , CLInvoice(..)
+    , CLInvoices(..)
     , fromNewInvoice
     ) where
 
-import Data.Text (Text)
-import Data.Text.Encoding (decodeUtf8)
 import Data.Aeson
 import Data.Aeson.Types (Parser)
+import Data.Text (Text)
+import Data.Text.Encoding (decodeUtf8)
+import Database.SQLite.Simple
 
 import qualified Data.Vector as V
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Lazy as BL
+
+import Bitsbacker.Data.Email
+import Bitsbacker.Data.Tiers (TierId)
+import Bitsbacker.DB.Table
 
 import Bitcoin.Denomination (MSats(..), toBits, showBits)
 import Network.Lightning.Bolt11
@@ -36,6 +43,13 @@ newtype WaitInvoice = WaitInvoice { getWaitInvoice :: (Int, CLInvoice) }
 newtype NewInvoice = NewInvoice { getNewInvoice :: Text }
     deriving Show
 
+data InvoiceRef = InvoiceRef
+    { invRefInvoiceId :: Text
+    , invRefTierId    :: TierId
+    , invRefEmail     :: Email
+    }
+    deriving Show
+
 instance FromJSON WaitInvoice where
     parseJSON v@(Object obj) = fmap WaitInvoice $
         (,) <$> obj .: "pay_index"
@@ -45,6 +59,13 @@ instance FromJSON WaitInvoice where
 instance FromJSON NewInvoice where
     parseJSON (Object obj) = NewInvoice <$> obj .: "bolt11"
     parseJSON _            = fail "NewInvoice: expected bolt11 field"
+
+instance ToRow InvoiceRef where
+    toRow InvoiceRef{..} =
+        toRow (invRefInvoiceId, invRefTierId, invRefEmail)
+
+invoiceRefFields :: [Text]
+invoiceRefFields = ["invoiceId", "tier_id", "email"]
 
 guardEmpty :: (Eq t, Monoid t) => (t -> a) -> t -> Maybe a
 guardEmpty _ v | v == mempty = Nothing
@@ -85,7 +106,20 @@ data Invoice = Invoice {
     }
     deriving Show
 
+instance Table InvoiceRef where
+    tableName _ = "invoices"
+    tableFields _ = invoiceRefFields
+
+instance FromRow InvoiceRef where
+    fromRow =
+        InvoiceRef <$> field
+                   <*> field
+                   <*> field
+
 newtype CLInvoice = CLInvoice { getCLInvoice :: Invoice }
+    deriving Show
+
+newtype CLInvoices = CLInvoices { getCLInvoices :: Invoice }
     deriving Show
 
 defaultInvoice :: Invoice
@@ -143,6 +177,11 @@ parseCLInvoice obj =
             <*> obj .: "expires_at"
             <*> obj .:? "paid_at"
             <*> pure defaultExpiry
+
+instance FromJSON CLInvoices where
+    parseJSON (Object obj) =
+        CLInvoices <$> (fmap getCLInvoice (obj .: "invoices"))
+    parseJSON _            = fail "unspected listinvoices value"
 
 instance FromJSON CLInvoice where
     parseJSON (Array a)

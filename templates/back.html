@@ -10,6 +10,13 @@
         <h1>Make bitsbacker a reality</h1>
     </div>
     <div class="container">
+        <form method="post">
+        <input type="hidden" name="user" value="{{user.name}}"/>
+        <div class="centered">
+            <label for="email">Email</label>
+            <input type="text" name="email"/>
+            <p>Your email is required for the receipt and for eventually creating an account if you choose to do so</p>
+        </div>
         {{#tiers}}
         <div class="row">
            {{#columns}}
@@ -20,12 +27,13 @@
                         <p class="per">per month</p>
                     </div>
                     <p>{{description}}</p>
-                    <a class="button button-primary" href="/checkout/{{tier_id}}">Select</a>
+                    <input class="button button-primary" type="submit" formaction="/checkout/{{tier_id}}" value="Select"></input>
                 </div>
             </div>
            {{/columns}}
         </div>
         {{/tiers}}
+        </form>
     </div>
 </body>
 </html>

@@ -6,6 +6,7 @@ import Control.Concurrent (MVar, withMVar)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
 import Data.Maybe (fromMaybe)
+import Data.Text (Text)
 import Database.SQLite.Simple (Connection)
 import Lucid
 import Network.Wai (Middleware)
@@ -17,17 +18,22 @@ import Web.Scotty
 
 import Invoicing
 
-import Bitsbacker.Templates
-import Bitsbacker.Logging
 import Bitsbacker.Config
-import Bitsbacker.Data.User
+import Bitsbacker.Data.Checkout
+import Bitsbacker.Data.Email
+import Bitsbacker.Data.Invoice
 import Bitsbacker.Data.Tiers
 import Bitsbacker.Data.TiersPage
-import Bitsbacker.Data.Checkout
+import Bitsbacker.Data.User
 import Bitsbacker.Html
+import Bitsbacker.Logging
+import Bitsbacker.Templates
+import Bitsbacker.DB.Table
 
 
 import qualified Data.HashMap.Lazy as Map
+import qualified Data.Text.Lazy as LT
+
 
 home :: Html ()
 home = do
@@ -106,24 +112,48 @@ renderTemplate cfg templ val =
         (_w, rendered) = renderMustacheW templ templateJson
     in html rendered
 
-checkout :: Config -> Template -> ActionM ()
-checkout cfg@Config{..} templ = do
-  itierId <- param "tier_id"
-  let tierId = TierId itierId
-  echeckoutPage <- liftIO (mkCheckoutPage cfg tierId)
+
+postCheckout :: Config -> ActionM ()
+postCheckout cfg@Config{..} = do
+  tierId <- fmap TierId   (param "tier_id")
+  user   <- fmap Username (param "user")
+  email  <- fmap Email    (param "email")
+  einv <- liftIO $ mkCheckout cfg tierId
+  case einv of
+    Left err ->
+        let desc = describeCheckoutError err
+            uri  = "/back/" <> getUsername user <> "?err=" <> desc
+        in redirect (LT.fromStrict uri)
+    Right inv -> do let invId  = invoiceId inv
+                        invRef = InvoiceRef invId tierId email
+                        coUri  = "/checkout/" <> invoiceId inv
+                    _ <- liftIO $ withMVar cfgConn $ \conn ->
+                           insert conn invRef
+                    redirect (LT.fromStrict coUri)
+
+
+getCheckout :: Config -> Template -> ActionM ()
+getCheckout cfg@Config{..} templ = do
+  invId   <- param "invoice_id"
+  minvRef <- liftIO $ withMVar cfgConn $ \conn ->
+               fetchOne conn (search "invoiceId" (invId :: Text))
+  invRef  <- maybe (fail "checkout: could not find invoice id") return minvRef
+  echeckoutPage <- liftIO (getCheckoutPage cfg invRef)
   case echeckoutPage of
     Left err -> do liftIO $ logError (show err)
                    checkoutErrorPage err
     Right checkoutPage -> renderTemplate cfg templ checkoutPage
 
+
 routes :: Config -> Template -> ScottyM ()
 routes cfg@Config{..} templates = do
-  get  "/"                  (simplePage (t "home") ())
-  get  "/signup"            (content signup)
-  post "/signup"            postSignup
-  get  "/:user"             (lookupUserPage cfg (t "user"))
-  get  "/back/:user"        (tiersPage cfg (t "back"))
-  get  "/checkout/:tier_id" (checkout cfg (t "checkout"))
+  get  "/"                     (simplePage (t "home") ())
+  get  "/signup"               (content signup)
+  post "/signup"               postSignup
+  get  "/:user"                (lookupUserPage cfg (t "user"))
+  get  "/back/:user"           (tiersPage cfg (t "back"))
+  post "/checkout/:tier_id"    (postCheckout cfg)
+  get  "/checkout/:invoice_id" (getCheckout cfg (t "checkout"))
   invoiceRoutes cfg
   middleware (static "public")
   where

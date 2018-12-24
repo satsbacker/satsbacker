@@ -3,7 +3,8 @@
 
 module Bitsbacker.Data.Checkout
     ( CheckoutPage(..)
-    , mkCheckoutPage
+    , getCheckoutPage
+    , mkCheckout
     , describeCheckoutError
     , CheckoutError(..)
     ) where
@@ -17,11 +18,12 @@ import Database.SQLite.Simple (Connection)
 import Bitsbacker.Data.Tiers
 import Bitsbacker.Data.User
 import Bitsbacker.Config
+import Bitsbacker.Data.Invoice
 import Invoicing
 import Bitcoin.Denomination (MSats, toBits, showBits)
 
-import Network.RPC.CLightning.Invoice
 import Network.RPC.Config (SocketConfig(..))
+import Network.RPC.CLightning (listinvoices)
 
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -34,6 +36,7 @@ data CheckoutPage = CheckoutPage
 
 data CheckoutError =
     InvoiceCreationFailed String
+  | InvoiceFetchFailed String
   | InvalidTier String
   deriving Show
 
@@ -48,6 +51,7 @@ describeCheckoutError :: IsString p => CheckoutError -> p
 describeCheckoutError checkoutErr =
     case checkoutErr of
       InvoiceCreationFailed _ -> "There was an error creating the invoice"
+      InvoiceFetchFailed _ -> "There was an error retrieving the invoice"
       InvalidTier _ -> "The selected tier is unavailable"
 
 safeGetTierById :: MVar Connection -> TierId -> IO (Either CheckoutError Tier)
@@ -59,9 +63,9 @@ safeGetTierById mvconn tierId = do
   return etier
 
 
-safeGetInvoice :: SocketConfig -> MSats -> Text
+safeNewInvoice :: SocketConfig -> MSats -> Text
                -> IO (Either CheckoutError Invoice)
-safeGetInvoice cfgRPC msat desc = do
+safeNewInvoice cfgRPC msat desc = do
   einvoice :: Either SomeException Invoice <-
                 try $ newInvoice cfgRPC msat desc
   return $
@@ -76,8 +80,31 @@ mkInvoiceDesc (Username name) msat desc =
     where
       amountBits = showBits (toBits msat) 
 
-mkCheckoutPage :: Config -> TierId -> IO (Either CheckoutError CheckoutPage)
-mkCheckoutPage Config{..} tierId = do
+getCheckoutPage :: Config -> InvoiceRef -> IO (Either CheckoutError CheckoutPage)
+getCheckoutPage Config{..} InvoiceRef{..} = do
+  etier <- safeGetTierById cfgConn invRefTierId
+  case etier of
+    Left err  -> return (Left err)
+    Right tier -> do
+      let tdef = tierDef tier
+          uid  = tierUserId tdef
+      muser <- withMVar cfgConn $ \conn -> getUserById conn uid
+      user  <- maybe (fail $ "missing user " ++ show uid) return muser
+      print invRefInvoiceId
+      einv :: Either SomeException (Maybe Invoice) <-
+                try $ listinvoices cfgRPC invRefInvoiceId
+      return $
+        case einv of
+          Left err      -> Left $ InvoiceFetchFailed (show err)
+          Right Nothing -> Left $ InvoiceFetchFailed "missing"
+          Right (Just inv) -> Right $ CheckoutPage
+                                { checkoutTier = tier
+                                , checkoutInvoice = inv
+                                , checkoutUser = user
+                                }
+
+mkCheckout :: Config -> TierId -> IO (Either CheckoutError Invoice)
+mkCheckout Config{..} tierId = do 
   etier <- safeGetTierById cfgConn tierId
   case etier of
     Left err  -> return (Left err)
@@ -90,12 +117,4 @@ mkCheckoutPage Config{..} tierId = do
           tdesc   = tierDescription tdef
           backee  = userName user
           invDesc = mkInvoiceDesc backee msat tdesc
-      einvoice <- safeGetInvoice cfgRPC msat invDesc
-      return $
-        case einvoice of
-          Left  err -> Left err
-          Right inv -> Right (CheckoutPage
-                                { checkoutTier = tier
-                                , checkoutInvoice = inv
-                                , checkoutUser = user
-                                })
+      safeNewInvoice cfgRPC msat invDesc

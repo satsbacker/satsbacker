@@ -6,7 +6,7 @@
 #+FILETAGS: bitsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2018-12-24 Mon 11:03]
+#+CAPTION: Clock summary at [2018-12-24 Mon 12:19]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
@@ -16,9 +16,10 @@
 * Todos
 
 
-** TODO Testnet payment
-
-** TODO Beta sign
+** TODO Checkout page should be based on the invoice id
+** TODO Wait for invoice should check to see if its in DB before waiting
+** TODO Lightning button next to payment request with link
+** TODO Wait for payment SSE
 
 ** TODO Show number of backers
 ** TODO Paywalled individual post

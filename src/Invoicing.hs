@@ -22,14 +22,13 @@ import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as B8
 
 import Bitsbacker.InvoiceId (newInvoiceId, encodeInvoiceId)
+import Bitsbacker.Data.Invoice
 import Bitsbacker.Config
 
-
 import Bitcoin.Denomination
-import Network.RPC.CLightning.Invoice
+
+
 import Network.RPC (rpc)
-
-
 
 newInvoice :: SocketConfig -> MSats -> Text -> IO Invoice
 newInvoice cfg (MSats int) description = do
@@ -37,15 +36,16 @@ newInvoice cfg (MSats int) description = do
   let label = encodeInvoiceId invId
       args  = [show int, B8.unpack label, T.unpack description]
   newInv <- rpc cfg "invoice" args
-  either fail return (fromNewInvoice (decodeUtf8 label) newInv)
+  let inv = fromNewInvoice (decodeUtf8 label) newInv
+  either fail return inv
 
-
-getInvoice :: Config -> ActionM ()
-getInvoice Config{..} = do
+postInvoice :: Config -> ActionM ()
+postInvoice Config{..} = do
   msatoshis   <- msats <$> param "msatoshi"
   description <-           param "description"
-  inv <- liftIO $ newInvoice cfgRPC msatoshis description
+  inv <- liftIO (newInvoice cfgRPC msatoshis description)
   json inv
+
 
 micro :: Int
 micro = 1000000
@@ -61,7 +61,7 @@ waitForInvoice !mv !invId = do
   if (invoiceId inv == invId)
      then return inv
      else waitForInvoice mv invId
-  
+
 
 waitInvoice :: Config -> ActionM ()
 waitInvoice Config{..} = do
@@ -77,6 +77,5 @@ waitInvoice Config{..} = do
 
 invoiceRoutes :: Config -> ScottyM ()
 invoiceRoutes cfg = do
-  post "/invoice" (getInvoice cfg)
+  post "/invoice" (postInvoice cfg)
   get "/invoice/:invId/wait" (waitInvoice cfg)
-

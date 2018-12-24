@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Bitsbacker.Data.Tiers where
@@ -101,7 +102,7 @@ tierFields :: [Text]
 tierFields = tierDefFields <> tierStatsFields
 
 newtype TierId = TierId { getTierId :: Int }
-    deriving (Show, Eq, Ord)
+    deriving (Show, Eq, Ord, ToField, FromField)
 
 instance Table TierDef where
     tableName _   = "tiers"
@@ -139,28 +140,16 @@ instance FromRow TierDef where
                     <*> fmap MSats field
                     <*> field
 
-newtype Limit = Limit { getLimit :: Int }
-    deriving Show
-
-noLimit :: Limit
-noLimit = Limit 0
-
-newtype Search a = Search { getSearch :: (Text, a, Limit) }
-    deriving Show
-
-search :: Text -> a -> Limit -> Search a
-search t v l = Search (t,v,l)
-
 getTierById :: Connection -> TierId -> IO (Maybe Tier)
 getTierById conn (TierId tierId) =
-    listToMaybe <$> getTiers_ conn (search "id" tierId (Limit 1))
+    listToMaybe <$> getTiers_ conn (search "id" tierId) (Limit 1)
 
 getTiers :: Connection -> UserId -> IO [Tier]
 getTiers conn (UserId userId) =
-    getTiers_ conn (search "user_id" userId noLimit)
+    getTiers_ conn (search "user_id" userId) noLimit
 
-getTiers_ :: ToField q => Connection -> Search q -> IO [Tier]
-getTiers_ conn (Search (term, val, Limit lim)) = do
+getTiers_ :: ToField q => Connection -> Search q -> Limit -> IO [Tier]
+getTiers_ conn (Search (term, val)) (Limit lim) = do
   let tdFields = T.intercalate ", " (map ("t."<>) tierDefFields)
       q = "SELECT t.id, "<>tdFields<>", count(s.tier_id) as subs "
         <>"FROM tiers t LEFT JOIN subscriptions s "
