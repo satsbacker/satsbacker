@@ -6,7 +6,7 @@
 #+FILETAGS: bitsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2018-12-23 Sun 09:23]
+#+CAPTION: Clock summary at [2018-12-23 Sun 17:10]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
@@ -15,7 +15,14 @@
 
 * Todos
 
-** TODO Quick test donate button
+
+** TODO Detect testnet and use different DB
+
+** TODO Testnet
+** TODO Testnet payment
+
+** TODO Beta sign
+
 ** TODO Show number of backers
 ** TODO Paywalled individual post
 ** TODO Public and backer posts

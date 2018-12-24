@@ -7,4 +7,4 @@ bitsbacker: src/Main.hs
 TAGS:
 	hasktags --etags src
 
-.PHONY: bitsbacker
+.PHONY: bitsbacker TAGS

@@ -8,22 +8,37 @@ import Control.Concurrent.MVar
 import Control.Concurrent (forkIO)
 import Control.Exception (SomeException, try)
 import Data.Functor (void)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Database.SQLite.Simple (Connection, execute, query_, Only(..))
-import Network.RPC.CLightning.Invoice
 import Network.RPC (rpc)
 import System.Environment (lookupEnv)
+import System.Timeout (timeout)
+import Data.Aeson
 
+import Bitcoin.Network
 import Bitsbacker.DB
 import Bitsbacker.Logging
 
+import Network.RPC.CLightning.Invoice
+import Network.RPC
+
 import Network.RPC.Config (SocketConfig(..))
+
+import qualified Data.HashMap.Lazy as Map
 
 data Config = Config {
       cfgConn      :: MVar Connection
     , cfgRPC       :: SocketConfig
     , cfgPayNotify :: MVar WaitInvoice
+    , cfgNetwork   :: BitcoinNetwork
     }
+
+instance ToJSON Config where
+    toJSON Config{..} =
+        object
+           [ "network"    .= cfgNetwork
+           , "is_testnet" .= (cfgNetwork == Testnet)
+           ]
 
 getPayIndex :: Connection -> IO Int
 getPayIndex conn =
@@ -49,15 +64,33 @@ waitInvoices !errs !payindex !cfg@Config{..} = do
       withMVar cfgConn $ \conn -> persistPayIndex conn index
       waitInvoices 0 index cfg
 
+getNetwork :: SocketConfig -> IO BitcoinNetwork
+getNetwork cfg = do
+  mval    <- timeout (5 * 1000000) (rpc_ cfg "getinfo")
+  val     <- maybe timeouterr return mval
+  network <- maybe err return (key "network" val)
+  maybe err return (parseNetwork network)
+  where
+    timeouterr = fail "timeout during clightning getinfo call"
+    err = fail "getinfo: network key not found"
+    key str (Object obj) =
+      case Map.lookup str obj of
+        Just (String txt) -> Just txt
+        Just _            -> Nothing
+        Nothing           -> Nothing
+    key _ _ = Nothing
+
 getConfig :: IO Config
 getConfig = do
   socketCfg <- getSocketConfig
-  conn <- openDb
+  network <- getNetwork socketCfg
+  logError $ "[ln] detected Bitcoin " ++ show network ++ " from clightning"
+  conn <- openDb network
   migrate conn
   payindex <- getPayIndex conn
   mvconn <- newMVar conn
   mvnotify <- newEmptyMVar
-  let cfg = Config mvconn socketCfg mvnotify
+  let cfg = Config mvconn socketCfg mvnotify network
   _ <- forkIO (waitInvoices 0 payindex cfg)
   return cfg
 
@@ -71,4 +104,9 @@ getSocketConfig = do
 getRPCSocket :: IO FilePath
 getRPCSocket = do
   mstrsocket <- lookupEnv "RPCSOCK"
-  return (fromMaybe "/home/jb55/.lightning-bitcoin-rpc" mstrsocket)
+  let from = if isJust mstrsocket
+               then "RPCSOCK env"
+               else "default setting"
+      cfg = fromMaybe "/home/jb55/.lightning-bitcoin-rpc" mstrsocket
+  logError $ "[rpc] using " ++ cfg  ++ " from " ++ from
+  return cfg

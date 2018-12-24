@@ -16,6 +16,8 @@ import System.Directory (createDirectoryIfMissing)
 
 import qualified Data.ByteString as BS
 
+import Bitcoin.Network
+import Bitsbacker.Logging
 
 -- ensureDb :: FilePath -> IO ()
 -- ensureDb dataPath = do
@@ -87,8 +89,15 @@ saveMigration from to stmts = do
       contents = foldMap ((<>"\n") . fromQuery) stmts
   BS.writeFile (".migrations/" ++ fileName) (encodeUtf8 contents)
 
-openDb :: IO Connection
-openDb = open "bitsbacker.db"
+openDb :: BitcoinNetwork -> IO Connection
+openDb network =
+  let dbfile = case network of
+                 Mainnet -> "bitsbacker.db"
+                 Testnet -> "bitsbacker-testnet.db"
+  in
+    do logError ("[db] using " ++ dbfile)
+       open dbfile
+
 
 migrate :: Connection -> IO ()
 migrate conn = do

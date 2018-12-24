@@ -7,3 +7,4 @@
 *.dyn_hi
 *.dyn_o
 /TAGS
+/bitsbacker-testnet.db

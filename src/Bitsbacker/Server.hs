@@ -26,6 +26,9 @@ import Bitsbacker.Data.TiersPage
 import Bitsbacker.Data.Checkout
 import Bitsbacker.Html
 
+
+import qualified Data.HashMap.Lazy as Map
+
 home :: Html ()
 home = do
   template Nothing $ do
@@ -52,13 +55,12 @@ getTemplate templates pname =
     templates { templateActual = pname }
 
 
-lookupUserPage :: MVar Connection -> Template -> ActionM ()
-lookupUserPage mvconn templ = do
-  (userId, user) <- withUser mvconn
-  stats <- liftIO $ getUserStats mvconn userId
+lookupUserPage :: Config -> Template -> ActionM ()
+lookupUserPage cfg@Config{..} templ = do
+  (userId, user) <- withUser cfgConn
+  stats <- liftIO $ getUserStats cfgConn userId
   let userPage = UserPage user stats
-      (_warnings, rendered) = renderMustacheW templ (toJSON userPage)
-  html rendered
+  renderTemplate cfg templ userPage
 
 
 simplePage :: ToJSON a => Template -> a -> ActionM ()
@@ -77,18 +79,32 @@ withUser mvconn = do
     Just user -> return user
 
 
-tiersPage :: MVar Connection -> Template -> ActionM ()
-tiersPage mvconn templ = do
-  (userId, user) <- withUser mvconn
-  tiers <- liftIO $ withMVar mvconn $ \conn -> getTiers conn userId
+tiersPage :: Config -> Template -> ActionM ()
+tiersPage cfg@Config{..} templ = do
+  (userId, user) <- withUser cfgConn
+  tiers <- liftIO $ withMVar cfgConn $ \conn -> getTiers conn userId
   let tpage = mkTiersPage user 2 tiers
-      (_warnings, rendered) = renderMustacheW templ (toJSON tpage)
-  html rendered
+  renderTemplate cfg templ tpage
 
 
 checkoutErrorPage :: CheckoutError -> ActionM ()
 checkoutErrorPage = raise . describeCheckoutError
 
+newtype MergedConfig a = MergedConfig { getMergedConfig :: (Config, a) }
+
+instance ToJSON a => ToJSON (MergedConfig a) where
+    toJSON (MergedConfig (cfg, val)) =
+        case (toJSON val, toJSON cfg) of
+          (Object valObj, cfgJson) ->
+            Object (Map.insert "config" cfgJson valObj)
+          (valJson, _) -> valJson -- don't merge if we see a non-object
+
+renderTemplate :: ToJSON a => Config -> Template -> a -> ActionM ()
+renderTemplate cfg templ val =
+    let templateData = MergedConfig (cfg, val)
+        templateJson = toJSON templateData
+        (_w, rendered) = renderMustacheW templ templateJson
+    in html rendered
 
 checkout :: Config -> Template -> ActionM ()
 checkout cfg@Config{..} templ = do
@@ -98,18 +114,15 @@ checkout cfg@Config{..} templ = do
   case echeckoutPage of
     Left err -> do liftIO $ logError (show err)
                    checkoutErrorPage err
-    Right checkoutPage -> do
-      let checkoutJson = toJSON checkoutPage
-          (_w, rendered) = renderMustacheW templ checkoutJson
-      html rendered
+    Right checkoutPage -> renderTemplate cfg templ checkoutPage
 
 routes :: Config -> Template -> ScottyM ()
 routes cfg@Config{..} templates = do
   get  "/"                  (simplePage (t "home") ())
   get  "/signup"            (content signup)
   post "/signup"            postSignup
-  get  "/:user"             (lookupUserPage cfgConn (t "user"))
-  get  "/back/:user"        (tiersPage cfgConn (t "back"))
+  get  "/:user"             (lookupUserPage cfg (t "user"))
+  get  "/back/:user"        (tiersPage cfg (t "back"))
   get  "/checkout/:tier_id" (checkout cfg (t "checkout"))
   invoiceRoutes cfg
   middleware (static "public")
