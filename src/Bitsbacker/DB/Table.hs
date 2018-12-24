@@ -70,5 +70,4 @@ fetch conn (Search (term, val)) (Limit lim) =
         q = "SELECT "<>fc<>" FROM "<>tn
             <>" WHERE "<>term<>" = ? "
             <>(if lim == 0 then "" else " LIMIT " <> T.pack (show lim))
-
     in query conn (Query q) (Only val)
