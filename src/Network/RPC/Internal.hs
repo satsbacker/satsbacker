@@ -16,7 +16,7 @@ import Network.RPC.Common (defaultTimeout)
 import Network.RPC.Config (SocketConfig(..))
 import Network.RPC.Error
 import Network.Socket.ByteString
-import Network.Socket (socket, Family(AF_UNIX), SocketType(Stream), connect, shutdown,
+import Network.Socket (socket, Family(AF_UNIX), SocketType(Stream), connect, close,
                        SockAddr(SockAddrUnix), ShutdownCmd(ShutdownReceive))
 
 import qualified Data.ByteString as BS
@@ -48,5 +48,5 @@ sockRequest SocketConfig{..} bs = liftIO $ timeout tout $ do
         chunk <- recv soc 4096
         let newBo = bo + openCloseSum chunk
         if newBo == 0 || BS.null chunk
-          then shutdown soc ShutdownReceive >> return [chunk]
+          then close soc >> return [chunk]
           else fmap (chunk :) (readChunks soc newBo)

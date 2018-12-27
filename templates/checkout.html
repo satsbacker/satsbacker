@@ -29,9 +29,18 @@
             </div>
         </div>
         <div class="row">
-            <label for="invoice">Payment Request</label>
-            <input class="u-full-width payreq" type="text" readonly value="{{invoice.payreq}}"></input>
-            <div class="peer"><p>peer: {{config.peer}}</p></div>
+            <div class="one-half column card-pay">
+                <label for="invoice">Payment Request</label>
+                <div class="qrpayreq qrcode"></div>
+                <input class="u-full-width payreq" type="text" readonly value="{{invoice.payreq}}"></input>
+
+            </div>
+            <div class="one-half column card-pay">
+                <label for="peer">Connect</label>
+                <p>You can use this to open an initial payment channel if you haven't already</p>
+                <div class="qrpeer qrcode"></div>
+                <input class="u-full-width peer" type="text" readonly value="{{config.peer}}"></input>
+            </div>
         </div>
         <div class="row">
             <div class="four columns">
@@ -51,6 +60,7 @@
         </div>
     </div>
 </body>
+<script type="text/javascript" src="/js/qrcode-svg.js"></script>
 <script>
  function formatDate(d) {
      var hours = d.getHours();
@@ -67,14 +77,49 @@
 
      var container = document.querySelector(".container");
 
-     es.addEventListener('ping', msg => {
-         console.log("ping");
+     es.addEventListener('paid', msg => {
+         container.innerHTML = "<p class=\"paid\">Payment Received!</p>";
+         es.close();
+     })
+
+     var payreq = document.querySelector("input.payreq").value;
+     var peer = document.querySelector("input.peer").value;
+
+     var payElem = document.querySelector(".qrpayreq");
+     var peerElem = document.querySelector(".qrpeer");
+
+     var size = 256;
+     var padding = 4;
+     var col = "#000000";
+     var bg  = "#ffffff";
+     var ecl = "L";
+
+     var payqr = new QRCode({
+         content: payreq,
+         padding: padding,
+         width: size,
+         height: size,
+         color: col,
+         background: bg,
+         ecl: ecl,
      });
 
-     es.addEventListener('paid', msg => {
-         console.log("got paid");
-         container.innerHTML = "<p class=\"paid\">Payment Received!</p>";
-     })
+     var peerqr = new QRCode({
+         content: peer,
+         padding: padding,
+         width: size,
+         height: size,
+         color: col,
+         background: bg,
+         ecl: ecl,
+     });
+
+     var paysvg = payqr.svg();
+     var peersvg = peerqr.svg();
+
+
+     peerElem.innerHTML = peersvg;
+     payElem.innerHTML = paysvg;
  })();
 </script>
 </html>
