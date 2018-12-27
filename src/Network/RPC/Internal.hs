@@ -17,7 +17,7 @@ import Network.RPC.Config (SocketConfig(..))
 import Network.RPC.Error
 import Network.Socket.ByteString
 import Network.Socket (socket, Family(AF_UNIX), SocketType(Stream), connect, close,
-                       SockAddr(SockAddrUnix), ShutdownCmd(ShutdownReceive))
+                       SockAddr(SockAddrUnix))
 
 import qualified Data.ByteString as BS
 

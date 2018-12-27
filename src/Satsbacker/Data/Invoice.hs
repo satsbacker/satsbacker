@@ -85,7 +85,8 @@ instance ToJSON Invoice where
           , "rhash"       .= invoicePaymentHash
           , "status"      .= invoiceStatus
           , "expiry"      .= invoiceExpires
-          , "expires_at"  .= (invoiceTimestamp + invoiceExpires)
+          , "expires_at"  .= invoiceExpires
+              -- FIXME: this should be invoiceExpires + invoiceTimestamp
           , "timestamp"   .= invoiceTimestamp
           ]
 
@@ -179,9 +180,9 @@ parseCLInvoice obj =
             <*> (fmap (fmap MSats) (obj .:? "msatoshi"))
             <*> obj .: "status"
             <*> obj .:? "description"
-            <*> obj .: "expires_at"
+            <*> obj .: "expires_at" -- FIXME: need to convert to expiry
             <*> obj .:? "paid_at"
-            <*> pure defaultExpiry
+            <*> pure 0 -- FIXME: need to populate timestamp somehow
 
 instance FromJSON CLInvoices where
     parseJSON (Object obj) =

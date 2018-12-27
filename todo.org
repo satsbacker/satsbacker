@@ -6,7 +6,7 @@
 #+FILETAGS: satsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2018-12-27 Thu 10:53]
+#+CAPTION: Clock summary at [2018-12-27 Thu 16:03]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
@@ -15,12 +15,16 @@
 
 * Todos
 
-** TODO Insert subscription entry
 ** TODO Add subscription entry on successful payment
-** TODO Lightning button next to payment request with link
-** TODO Show number of bits and backers on jk 
+** TODO Successful payment page
 
-** TODO Show number of backers
+Perhaps this should just go right to the subscription view?
+
+** TODO Email with receipt
+
+** TODO Lightning button next to payment request with link
+
+** TODO Show number of bits and backers
 ** TODO Paywalled individual post
 ** TODO Public and backer posts
 

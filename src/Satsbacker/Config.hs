@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Satsbacker.Config where
 
@@ -112,7 +113,6 @@ waitInvoices !errs !payindex !cfg@Config{..} = do
       if isEmpty
         then putMVar cfgPayNotify wi
         else void (swapMVar cfgPayNotify wi)
-      print wi
       withMVar cfgConn $ \conn -> persistPayIndex conn index
       waitInvoices 0 index cfg
 

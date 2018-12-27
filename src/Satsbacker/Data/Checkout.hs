@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Satsbacker.Data.Checkout
@@ -12,7 +13,6 @@ module Satsbacker.Data.Checkout
 import Control.Concurrent.MVar (withMVar, MVar)
 import Control.Exception (try, SomeException)
 import Data.Aeson
-import Data.Maybe (listToMaybe)
 import Data.String (IsString)
 import Database.SQLite.Simple (Connection)
 
@@ -102,7 +102,7 @@ getCheckoutPage Config{..} InvoiceRef{..} = do
                                 , checkoutInvoice = inv
                                 , checkoutUser = user
                                 }
-          Right more ->
+          Right _ ->
             Left $ InvoiceFetchFailed "more than one invoice with the same id"
 
 mkCheckout :: Config -> TierId -> IO (Either CheckoutError Invoice)

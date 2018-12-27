@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE BangPatterns #-}
 
@@ -9,14 +10,11 @@ module Invoicing
     ) where
 
 import Blaze.ByteString.Builder (fromByteString)
-import Control.Applicative (optional)
 import Control.Concurrent
 import Control.Concurrent.Chan (Chan, writeChan)
 import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8)
-import Network.HTTP.Base (RequestMethod(GET))
-import Network.HTTP.Types (status402, status500)
 import Network.Wai (Middleware, pathInfo, requestMethod)
 import Network.Wai.EventSource (ServerEvent(..), eventSourceAppChan)
 import System.Timeout (timeout)
@@ -27,7 +25,6 @@ import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as B8
 
 import Satsbacker.Config
-import Satsbacker.Logging
 import Satsbacker.Data.Invoice
 import Satsbacker.InvoiceId (newInvoiceId, encodeInvoiceId)
 import Network.RPC.CLightning (listinvoices)
@@ -80,6 +77,7 @@ checkPaidInvoice cfgRPC invId = do
                 else return Nothing
     _ -> fail ("more than one invoice with id "  ++ T.unpack invId)
 
+pinger :: MVar () -> Chan ServerEvent -> IO ()
 pinger stop events = do
   m <- tryTakeMVar stop
   case m of
@@ -97,8 +95,8 @@ waitInvoice Config{..} events mtimeout invId = do
   mpaid <- checkPaidInvoice cfgRPC invId
   stop <- newEmptyMVar
   case mpaid of
-    Nothing  -> wait stop mtimeout invId
-    Just inv -> sendPaidEvent stop
+    Nothing  -> wait stop
+    Just _   -> sendPaidEvent stop
   where
     eventName     = fromByteString "paid"
     eventId       = Just (fromByteString "0")
@@ -108,19 +106,19 @@ waitInvoice Config{..} events mtimeout invId = do
       writeChan events paidEvent
       writeChan events CloseEvent
 
-    wait pingStop mtimeout invId = do
+    wait pingStop = do
       -- default 30 second timeout
       let waitFor = maybe (30 * micro) sanitizeTimeout mtimeout
-      forkIO (pinger pingStop events)
+      _ <- forkIO (pinger pingStop events)
 
       minv <- timeout waitFor $ waitForInvoice cfgPayNotify invId
       case minv of
         Nothing  -> do putMVar pingStop ()
                        writeChan events CloseEvent
-        Just inv -> sendPaidEvent pingStop
+        Just _   -> sendPaidEvent pingStop
 
 waitinvoiceSSE :: Config -> Middleware
-waitinvoiceSSE config next req responder =
+waitinvoiceSSE config gonext req responder =
     let
         method   = requestMethod req
         path     = pathInfo req
@@ -129,11 +127,11 @@ waitinvoiceSSE config next req responder =
       case (method, path) of
         ("GET", ["payment-stream", invId]) -> do
             events <- newChan
-            forkIO (waitInvoice config events mtimeout invId)
+            _ <- forkIO (waitInvoice config events mtimeout invId)
             let sseApp = eventSourceAppChan events
             sseApp req responder
         (_, _) ->
-            next req responder
+            gonext req responder
 
 
 invoiceRoutes :: Config -> ScottyM ()

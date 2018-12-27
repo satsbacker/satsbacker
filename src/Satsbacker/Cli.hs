@@ -1,4 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 
 module Satsbacker.Cli where
 
@@ -61,7 +63,8 @@ usage = do
   putStrLn ""
   putStrLn "commands:"
   putStrLn ""
-  putStrLn "  - create-user"
+  putStrLn "  create-user"
+  putStrLn "  server"
   putStrLn ""
   exitFailure
 

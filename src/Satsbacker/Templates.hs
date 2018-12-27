@@ -1,4 +1,6 @@
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 
 module Satsbacker.Templates where
 

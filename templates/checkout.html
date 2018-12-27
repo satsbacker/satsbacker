@@ -70,6 +70,7 @@
 
  (function(){
      document.querySelectorAll(".timestamp").forEach(function(ts) {
+         console.log(ts.innerHTML);
          ts.innerHTML = formatDate(new Date(+ts.innerHTML * 1000));
      });
 
@@ -108,7 +109,7 @@
          content: peer,
          padding: padding,
          width: size,
-         height: size,
+
          color: col,
          background: bg,
          ecl: ecl,
