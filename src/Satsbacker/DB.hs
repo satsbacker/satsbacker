@@ -36,9 +36,10 @@ migrations = [
      \ created_at INTEGER NOT_NULL DEFAULT CURRENT_TIMESTAMP, \
      \ permissions INTEGER) ",    -- 2
 
-     "CREATE TABLE invoices (invoiceId TEXT PRIMARY KEY,\
+     "CREATE TABLE invoices (invoice_id TEXT PRIMARY KEY,\
      \ tier_id INTEGER,\
-     \ email TEXT)", -- 3
+     \ email TEXT,\
+     \ payer_id INTEGER)", -- 3
 
      "CREATE TABLE tiers (id INTEGER PRIMARY KEY,\
      \ user_id INTEGER NOT NULL,\
@@ -52,7 +53,9 @@ migrations = [
 
      "CREATE TABLE subscriptions (id INTEGER PRIMARY KEY,\
      \ for_user INTEGER NOT NULL,\
-     \ user_id INTEGER NOT NULL,\
+     \ user_id INTEGER,\
+     \ user_email TEXT,\
+     \ user_cookie TEXT,\
      \ valid_until INTEGER NOT NULL,\
      \ tier_id INTEGER NOT NULL,\
      \ created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP\

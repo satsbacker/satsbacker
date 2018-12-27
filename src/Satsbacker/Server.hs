@@ -5,6 +5,7 @@
 module Satsbacker.Server where
 
 import Control.Concurrent (MVar, withMVar)
+import Control.Applicative (optional)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
 import Data.Maybe (fromMaybe)
@@ -25,6 +26,7 @@ import Satsbacker.Config
 import Satsbacker.Data.Checkout
 import Satsbacker.Data.Email
 import Satsbacker.Data.Invoice
+import Satsbacker.Data.InvoiceId (InvId(..))
 import Satsbacker.Data.Tiers
 import Satsbacker.Data.TiersPage
 import Satsbacker.Data.User
@@ -67,8 +69,9 @@ getTemplate templates pname =
 lookupUserPage :: Config -> Template -> ActionM ()
 lookupUserPage cfg@Config{..} templ = do
   (userId, user) <- withUser cfgConn
-  stats <- liftIO $ getUserStats cfgConn userId
-  let userPage = UserPage user stats
+  mstats <- liftIO $ withMVar cfgConn $ \conn -> getUserStats conn userId
+  let stats = fromMaybe (UserStats 0 0) mstats
+      userPage = UserPage user stats
   renderTemplate cfg templ userPage
 
 
@@ -118,9 +121,10 @@ renderTemplate cfg templ val =
 
 postCheckout :: Config -> ActionM ()
 postCheckout cfg@Config{..} = do
-  tierId <- fmap TierId   (param "tier_id")
-  user   <- fmap Username (param "user")
-  email  <- fmap Email    (param "email")
+  tierId  <- fmap TierId   (param "tier_id")
+  user    <- fmap Username (param "user")
+  email   <- fmap Email    (param "email")
+  payerId <- fmap (fmap UserId) (optional (param "payer_id"))
   einv <- liftIO $ mkCheckout cfg tierId
   case einv of
     Left err ->
@@ -128,8 +132,8 @@ postCheckout cfg@Config{..} = do
             uri  = "/back/" <> getUsername user <> "?err=" <> desc
         in redirect (LT.fromStrict uri)
     Right inv -> do let invId  = invoiceId inv
-                        invRef = InvoiceRef invId tierId email
-                        coUri  = "/checkout/" <> invoiceId inv
+                        invRef = InvoiceRef invId tierId email payerId
+                        coUri  = "/checkout/" <> getInvId (invoiceId inv)
                     _ <- liftIO $ withMVar cfgConn $ \conn ->
                            insert conn invRef
                     redirect (LT.fromStrict coUri)
@@ -139,7 +143,7 @@ getCheckout :: Config -> Template -> ActionM ()
 getCheckout cfg@Config{..} templ = do
   invId   <- param "invoice_id"
   minvRef <- liftIO $ withMVar cfgConn $ \conn ->
-               fetchOne conn (search "invoiceId" (invId :: Text))
+               fetchOne conn (search "invoice_id" (invId :: Text))
   invRef  <- maybe (fail "checkout: could not find invoice id") return minvRef
   echeckoutPage <- liftIO (getCheckoutPage cfg invRef)
   case echeckoutPage of

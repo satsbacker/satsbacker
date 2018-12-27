@@ -26,7 +26,8 @@ import qualified Data.ByteString.Char8 as B8
 
 import Satsbacker.Config
 import Satsbacker.Data.Invoice
-import Satsbacker.InvoiceId (newInvoiceId, encodeInvoiceId)
+import Satsbacker.Data.InvoiceId (newInvoiceId, encodeInvoiceId, InvId(..))
+
 import Network.RPC.CLightning (listinvoices)
 import Network.RPC.Config (SocketConfig(..))
 
@@ -41,7 +42,7 @@ newInvoice cfg (MSats int) description = do
   let label = encodeInvoiceId invId
       args  = [show int, B8.unpack label, T.unpack description]
   newInv <- rpc cfg "invoice" args
-  let inv = fromNewInvoice (decodeUtf8 label) newInv
+  let inv = fromNewInvoice (InvId (decodeUtf8 label)) newInv
   either fail return inv
 
 postInvoice :: Config -> ActionM ()
@@ -60,15 +61,15 @@ sanitizeTimeout :: Int -> Int
 sanitizeTimeout = min (1800 * micro) . (*micro)
 
 
-waitForInvoice :: MVar WaitInvoice -> Text -> IO Invoice
+waitForInvoice :: MVar WaitInvoice -> InvId -> IO Invoice
 waitForInvoice !mv !invId = do
   WaitInvoice (!_, !(CLInvoice !inv)) <- takeMVar mv
   if (invoiceId inv == invId)
      then return inv
      else waitForInvoice mv invId
 
-checkPaidInvoice :: SocketConfig -> Text -> IO (Maybe Invoice)
-checkPaidInvoice cfgRPC invId = do
+checkPaidInvoice :: SocketConfig -> InvId -> IO (Maybe Invoice)
+checkPaidInvoice cfgRPC (InvId invId) = do
   invs <- listinvoices cfgRPC invId
   case invs of
     []    -> return Nothing
@@ -90,7 +91,7 @@ pinger stop events = do
     commentEvent = CommentEvent (fromByteString "ping")
 
 
-waitInvoice :: Config -> Chan ServerEvent -> Maybe Int -> Text -> IO ()
+waitInvoice :: Config -> Chan ServerEvent -> Maybe Int -> InvId -> IO ()
 waitInvoice Config{..} events mtimeout invId = do
   mpaid <- checkPaidInvoice cfgRPC invId
   stop <- newEmptyMVar
@@ -127,7 +128,7 @@ waitinvoiceSSE config gonext req responder =
       case (method, path) of
         ("GET", ["payment-stream", invId]) -> do
             events <- newChan
-            _ <- forkIO (waitInvoice config events mtimeout invId)
+            _ <- forkIO (waitInvoice config events mtimeout (InvId invId))
             let sseApp = eventSourceAppChan events
             sseApp req responder
         (_, _) ->

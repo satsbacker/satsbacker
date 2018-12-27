@@ -4,13 +4,14 @@
 
 module Satsbacker.Data.User where
 
-import Control.Concurrent (MVar)
 import Crypto.PasswordStore (makePassword)
 import Data.Aeson
 import Data.ByteString (ByteString)
 import Data.Maybe (listToMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
+
+import Bitcoin.Denomination
 
 import Database.SQLite.Simple
 import Database.SQLite.Simple.FromField
@@ -52,8 +53,13 @@ data UserPage = UserPage {
 
 data UserStats = UserStats {
       userStatsBackers  :: Int
-    , userStatsPerMonth :: Int
+    , userStatsPerMonth :: MSats
     }
+
+instance FromRow UserStats where
+    fromRow =
+        UserStats <$> field
+                  <*> fmap MSats field
 
 userFields :: [Text]
 userFields = [
@@ -105,7 +111,7 @@ instance ToJSON UserPage where
 instance ToJSON UserStats where
     toJSON UserStats{..} =
         object [ "backers"  .= userStatsBackers
-               , "perMonth" .= userStatsPerMonth
+               , "perMonth" .= showBits (toBits userStatsPerMonth)
                ]
 
 defaultPermissions :: Permissions
@@ -143,6 +149,11 @@ getUser conn username = do
       return (Just (UserId userId, user))
 
 
-getUserStats :: MVar Connection -> UserId -> IO UserStats
-getUserStats _conn _userId = do
-  return (UserStats 100 1000)
+getUserStats :: Connection -> UserId -> IO (Maybe UserStats)
+getUserStats conn (UserId userId) =
+  let q = "SELECT count(s.tier_id) as backers, coalesce(sum(t.amount_msats),0) as per_month \
+          \FROM subscriptions s \
+          \INNER JOIN tiers t ON t.id = s.tier_id \
+          \WHERE s.for_user = ? "
+  in
+    fmap listToMaybe $ query conn (Query q) (Only userId)

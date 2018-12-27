@@ -17,12 +17,18 @@ import System.Environment (lookupEnv)
 import System.Timeout (timeout)
 import Data.Aeson
 import Data.Aeson.Types
+import Foreign.C.Types (CTime(..))
 import Data.List.NonEmpty (NonEmpty)
+import System.Posix.Time (epochTime)
 
 import Bitcoin.Network
 import Satsbacker.DB
-import Satsbacker.Logging
+import Satsbacker.DB.Table
 import Satsbacker.Data.Invoice
+import Satsbacker.Data.InvoiceId
+import Satsbacker.Data.Subscription
+import Satsbacker.Data.Tiers (TierDef(..))
+import Satsbacker.Logging
 
 import Network.RPC
 
@@ -83,7 +89,7 @@ instance ToJSON Config where
 showLnPeer :: LightningConfig -> Text
 showLnPeer LightningConfig{..} =
     showPeer (NE.head lncfgPeerAddr) lncfgPeerId
-        
+
 showPeer :: PeerAddr -> Text -> Text
 showPeer PeerAddr{..} peerId =
     if peerAddrPort == 9735
@@ -101,6 +107,36 @@ persistPayIndex conn payind =
   execute conn "UPDATE payindex SET payindex = ?" (Only payind)
 
 
+persistSubFromInvId :: MVar Connection -> InvId -> IO (Maybe Subscription)
+persistSubFromInvId mvconn (InvId invId) = do
+  minvRef <- withMVar mvconn $ \conn ->
+    fetchOne conn (search "invoice_id" invId)
+
+  case minvRef of
+    Nothing -> do logError $ "[WARN] couldn't find paid invoiceId " ++ show invId
+                  return Nothing
+    Just InvoiceRef{..} -> do
+      mtier <- withMVar mvconn $ \conn ->
+        fetchOne conn (search "id" invRefTierId)
+
+      TierDef{..} <- maybe (fail "could not find tier for invoice") return mtier
+
+      CTime timestamp <- epochTime
+
+      let sub = Subscription {
+                  subForUser     = tierUserId
+                , subPayerId     = invRefPayerId
+                , subPayerEmail  = invRefEmail
+                , subPayerCookie = Nothing -- TODO: do we need cookies?
+                , subValidUntil  = fromIntegral timestamp + 2678400
+                    -- NOTE: always 31 days
+                , subTierId      = invRefTierId
+                }
+
+      _ <- withMVar mvconn $ \conn -> insert conn sub
+      return (Just sub)
+
+
 waitInvoices :: Int -> Int -> Config -> IO ()
 waitInvoices 10 _ _ = fail "Too many errors when waiting for payments"
 waitInvoices !errs !payindex !cfg@Config{..} = do
@@ -108,7 +144,8 @@ waitInvoices !errs !payindex !cfg@Config{..} = do
            try $ rpc cfgRPC "waitanyinvoice" [payindex]
   case ewi of
     Left err -> logError (show err) >> waitInvoices (errs + 1) payindex cfg
-    Right !wi@(WaitInvoice (!index, !_inv)) -> do
+    Right !wi@(WaitInvoice (!index, !inv)) -> do
+      _sub <- persistSubFromInvId cfgConn (invoiceId (getCLInvoice inv))
       isEmpty <- isEmptyMVar cfgPayNotify
       if isEmpty
         then putMVar cfgPayNotify wi

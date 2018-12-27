@@ -20,6 +20,7 @@ import Satsbacker.Data.Tiers
 import Satsbacker.Data.User
 import Satsbacker.Config
 import Satsbacker.Data.Invoice
+import Satsbacker.Data.InvoiceId (InvId(..))
 import Invoicing
 import Bitcoin.Denomination (MSats, toBits, showBits)
 
@@ -92,7 +93,7 @@ getCheckoutPage Config{..} InvoiceRef{..} = do
       muser <- withMVar cfgConn $ \conn -> getUserById conn uid
       user  <- maybe (fail $ "missing user " ++ show uid) return muser
       invs :: Either SomeException [Invoice] <-
-                try $ listinvoices cfgRPC invRefInvoiceId
+                try $ listinvoices cfgRPC (getInvId invRefInvoiceId)
       return $
         case invs of
           Left err    -> Left $ InvoiceFetchFailed (show err)

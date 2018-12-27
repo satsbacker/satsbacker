@@ -27,7 +27,9 @@ import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Lazy as BL
 
 import Satsbacker.Data.Email
+import Satsbacker.Data.InvoiceId (InvId(..))
 import Satsbacker.Data.Tiers (TierId)
+import Satsbacker.Data.User (UserId(..))
 import Satsbacker.DB.Table
 
 import Bitcoin.Denomination (MSats(..), toBits, showBits)
@@ -46,9 +48,10 @@ newtype NewInvoice = NewInvoice { getNewInvoice :: Text }
     deriving Show
 
 data InvoiceRef = InvoiceRef
-    { invRefInvoiceId :: Text
+    { invRefInvoiceId :: InvId
     , invRefTierId    :: TierId
     , invRefEmail     :: Email
+    , invRefPayerId   :: Maybe UserId
     }
     deriving Show
 
@@ -64,10 +67,19 @@ instance FromJSON NewInvoice where
 
 instance ToRow InvoiceRef where
     toRow InvoiceRef{..} =
-        toRow (invRefInvoiceId, invRefTierId, invRefEmail)
+        toRow ( getInvId invRefInvoiceId
+              , invRefTierId
+              , invRefEmail
+              , fmap getUserId invRefPayerId
+              )
 
 invoiceRefFields :: [Text]
-invoiceRefFields = ["invoiceId", "tier_id", "email"]
+invoiceRefFields =
+    [ "invoice_id"
+    , "tier_id"
+    , "email"
+    , "payer_id"
+    ]
 
 guardEmpty :: (Eq t, Monoid t) => (t -> a) -> t -> Maybe a
 guardEmpty _ v | v == mempty = Nothing
@@ -97,7 +109,7 @@ defaultExpiry :: Int
 defaultExpiry = 3600
 
 data Invoice = Invoice {
-      invoiceId             :: Text
+      invoiceId             :: InvId
     , invoicePaymentHash    :: Text
     , invoicePaymentRequest :: Maybe Text
     , invoiceMSat           :: Maybe MSats
@@ -118,9 +130,10 @@ instance Table InvoiceRef where
 
 instance FromRow InvoiceRef where
     fromRow =
-        InvoiceRef <$> field
+        InvoiceRef <$> fmap InvId field
                    <*> field
                    <*> field
+                   <*> fmap (fmap UserId) field
 
 newtype CLInvoice = CLInvoice { getCLInvoice :: Invoice }
     deriving Show
@@ -131,7 +144,7 @@ newtype CLInvoices = CLInvoices { getCLInvoices :: [Invoice] }
 defaultInvoice :: Invoice
 defaultInvoice =
     Invoice {
-      invoiceId             = ""
+      invoiceId             = InvId ""
     , invoicePaymentHash    = ""
     , invoicePaymentRequest = Nothing
     , invoiceMSat           = Nothing
@@ -142,12 +155,12 @@ defaultInvoice =
     , invoiceTimestamp      = 0
     }
 
-fromNewInvoice :: Text -> NewInvoice -> Either String Invoice
-fromNewInvoice label (NewInvoice bolt11) = do
+fromNewInvoice :: InvId -> NewInvoice -> Either String Invoice
+fromNewInvoice invId (NewInvoice bolt11) = do
   decoded <- decodeBolt11 bolt11
-  return (fromBolt11 label bolt11 decoded)
+  return (fromBolt11 invId bolt11 decoded)
 
-fromBolt11 :: Text -> Text -> Bolt11 -> Invoice
+fromBolt11 :: InvId -> Text -> Bolt11 -> Invoice
 fromBolt11 invId rawBolt11 Bolt11{..} =
   foldr update initInvoice bolt11Tags
   where
@@ -174,7 +187,7 @@ fromBolt11 invId rawBolt11 Bolt11{..} =
 
 parseCLInvoice :: Object -> Parser Invoice
 parseCLInvoice obj =
-    Invoice <$> obj .: "label"
+    Invoice <$> fmap InvId (obj .: "label")
             <*> obj .: "payment_hash"
             <*> obj .:? "bolt11"
             <*> (fmap (fmap MSats) (obj .:? "msatoshi"))
