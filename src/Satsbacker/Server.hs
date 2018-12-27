@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Bitsbacker.Server where
+module Satsbacker.Server where
 
 import Control.Concurrent (MVar, withMVar)
 import Control.Monad.IO.Class (liftIO)
@@ -15,20 +15,21 @@ import System.Environment (lookupEnv)
 import Text.Mustache
 import Text.Read (readMaybe)
 import Web.Scotty
+import System.Posix.Env (putEnv)
 
 import Invoicing
 
-import Bitsbacker.Config
-import Bitsbacker.Data.Checkout
-import Bitsbacker.Data.Email
-import Bitsbacker.Data.Invoice
-import Bitsbacker.Data.Tiers
-import Bitsbacker.Data.TiersPage
-import Bitsbacker.Data.User
-import Bitsbacker.Html
-import Bitsbacker.Logging
-import Bitsbacker.Templates
-import Bitsbacker.DB.Table
+import Satsbacker.Config
+import Satsbacker.Data.Checkout
+import Satsbacker.Data.Email
+import Satsbacker.Data.Invoice
+import Satsbacker.Data.Tiers
+import Satsbacker.Data.TiersPage
+import Satsbacker.Data.User
+import Satsbacker.Html
+import Satsbacker.Logging
+import Satsbacker.Templates
+import Satsbacker.DB.Table
 
 
 import qualified Data.HashMap.Lazy as Map
@@ -171,6 +172,11 @@ server :: IO ()
 server = do
   cfg <- getConfig
   startServer cfg
+
+testServer :: IO ()
+testServer = do
+  putEnv "RPCSOCK=/home/jb55/.lightning-testnet-rpc"
+  server
 
 startServer :: Config -> IO ()
 startServer cfg = do

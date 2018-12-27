@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
-module Bitsbacker.Templates where
+module Satsbacker.Templates where
 
 import Data.List (isSuffixOf)
 import Text.Mustache

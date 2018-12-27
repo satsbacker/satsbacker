@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Bitsbacker.DB
+module Satsbacker.DB
     ( migrate
     , openDb
     ) where
@@ -17,7 +17,7 @@ import System.Directory (createDirectoryIfMissing)
 import qualified Data.ByteString as BS
 
 import Bitcoin.Network
-import Bitsbacker.Logging
+import Satsbacker.Logging
 
 -- ensureDb :: FilePath -> IO ()
 -- ensureDb dataPath = do
@@ -92,8 +92,8 @@ saveMigration from to stmts = do
 openDb :: BitcoinNetwork -> IO Connection
 openDb network =
   let dbfile = case network of
-                 Mainnet -> "bitsbacker.db"
-                 Testnet -> "bitsbacker-testnet.db"
+                 Mainnet -> "satsbacker.db"
+                 Testnet -> "satsbacker-testnet.db"
   in
     do logError ("[db] using " ++ dbfile)
        open dbfile

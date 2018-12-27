@@ -1,7 +1,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Bitsbacker.Html where
+module Satsbacker.Html where
 
 import Lucid
 import Data.Text (Text)
@@ -34,15 +34,15 @@ template title contents = do
       meta_ [ name_ "viewport", content_ "width=device-width, initial-scale=1" ]
       link_ [ rel_ "stylesheet", href_ "css/normalize.css" ]
       link_ [ rel_ "stylesheet", href_ "css/skeleton.css" ]
-      link_ [ rel_ "stylesheet", href_ "css/bitsbacker.css" ]
+      link_ [ rel_ "stylesheet", href_ "css/satsbacker.css" ]
       link_ [ rel_ "stylesheet", type_ "text/css", href_ "css/font.css" ]
     body_ $ do
       div_ [ class_ "header" ] $ do
-        span_ [ class_ "logo" ] "bitsbacker"
+        span_ [ class_ "logo" ] "satsbacker"
       contents
   where
     renderedTitle =
-      maybe "bitsbacker" (<> " | bitsbacker") title
+      maybe "satsbacker" (<> " | satsbacker") title
 
 
 content :: Html a -> ActionM ()

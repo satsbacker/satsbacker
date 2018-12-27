@@ -11,12 +11,12 @@ import Control.Concurrent.MVar (withMVar)
 
 import Bitcoin.Denomination
 
-import Bitsbacker.Cli
-import Bitsbacker.Config
-import Bitsbacker.Data.User
-import Bitsbacker.Data.Email
-import Bitsbacker.Data.Tiers
-import Bitsbacker.DB.Table (insert)
+import Satsbacker.Cli
+import Satsbacker.Config
+import Satsbacker.Data.User
+import Satsbacker.Data.Email
+import Satsbacker.Data.Tiers
+import Satsbacker.DB.Table (insert)
 
 import qualified Data.Text as T
 
@@ -30,7 +30,6 @@ main = do
 mainWith :: [Text] -> IO ()
 mainWith args = do
   cfg <- getConfig
-
   case args of
     (x:xs) -> processArgs cfg x xs
     []     -> usage
@@ -51,12 +50,12 @@ testTierData userId =
   , newT 5 (bits 1000) "Gain access to periodic backer-only blog posts and updates"
   , newT 15 (bits 5000) $ T.unwords $
       "In addition to the previous levels, " :
-      "gain access to the bitsbacker beta " :
+      "gain access to the satsbacker beta " :
       "when it becomes available." : []
   , newT 50 (bits 10000) $ T.unwords $
       "In addition to the previous levels, recieve a premium " :
-      "bitsbacker account, where your account will be " :
-      "optionally listed in the bitsbacker hall of fame. " : []
+      "satsbacker account, where your account will be " :
+      "optionally listed in the satsbacker hall of fame. " : []
   ]
 
 testTiers :: UserId -> [Tier]
@@ -73,7 +72,7 @@ testData = do
   user' <- createUser (Plaintext "test")
   let user = user' { userEmail = Email "jb55@jb55.com"
                    , userName  = Username "jb55"
-                   , userMaking = "bitsbacker"
+                   , userMaking = "satsbacker"
                    }
   withMVar cfgConn $ \conn -> do
     userId <- insert conn user

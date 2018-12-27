@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Bitsbacker.DB.Table
+module Satsbacker.DB.Table
     ( Table(..)
     , insert
     , insertL

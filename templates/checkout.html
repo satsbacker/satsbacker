@@ -3,7 +3,7 @@
 <head>
 {{>head}}
     {{#user}}
-    <title>Back {{name}} checkout | bitsbacker</title>
+    <title>Back {{name}} checkout | satsbacker</title>
     {{/user}}
 </head>
 <body>
@@ -43,7 +43,7 @@
         </div>
         <div class="row">
             <div class="four columns">
-                <label for="status">Status</label>
+                <label id="status" for="status">Status</label>
             </div>
             <div class="eight columns">
                 <p>Waiting for payment...</p>
@@ -62,6 +62,19 @@
      document.querySelectorAll(".timestamp").forEach(function(ts) {
          ts.innerHTML = formatDate(new Date(+ts.innerHTML * 1000));
      });
+
+     var es = new EventSource('/payment-stream/{{invoice.id}}')
+
+     var container = document.querySelector(".container");
+
+     es.addEventListener('ping', msg => {
+         console.log("ping");
+     });
+
+     es.addEventListener('paid', msg => {
+         console.log("got paid");
+         container.innerHTML = "<p class=\"paid\">Payment Received!</p>";
+     })
  })();
 </script>
 </html>

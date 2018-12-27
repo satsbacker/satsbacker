@@ -2,10 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Bitsbacker.Html.User where
+module Satsbacker.Html.User where
 
-import Bitsbacker.Data.User
-import Bitsbacker.Html
+import Satsbacker.Data.User
+import Satsbacker.Html
 
 
 import Data.Text (Text)

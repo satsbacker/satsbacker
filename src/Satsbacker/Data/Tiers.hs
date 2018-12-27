@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Bitsbacker.Data.Tiers where
+module Satsbacker.Data.Tiers where
 
 import Data.Text (Text)
 import Data.Maybe (listToMaybe)
@@ -11,8 +11,8 @@ import Database.SQLite.Simple.FromField
 import Data.Aeson
 
 import Bitcoin.Denomination
-import Bitsbacker.DB.Table
-import Bitsbacker.Data.User (UserId(..))
+import Satsbacker.DB.Table
+import Satsbacker.Data.User (UserId(..))
 
 import qualified Data.HashMap.Lazy as M
 import qualified Data.Text as T

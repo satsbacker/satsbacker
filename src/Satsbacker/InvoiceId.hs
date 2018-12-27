@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE BangPatterns #-}
 
-module Bitsbacker.InvoiceId where
+module Satsbacker.InvoiceId where
 
 import Control.Applicative ((<$>))
 import Control.Monad (liftM)

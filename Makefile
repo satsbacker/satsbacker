@@ -1,10 +1,10 @@
 
-all: bitsbacker
+all: satsbacker
 
-bitsbacker: src/Main.hs
+satsbacker: src/Main.hs
 	ghc -Wall -O2 --make $< -o $@
 
 TAGS:
 	hasktags --etags src
 
-.PHONY: bitsbacker TAGS
+.PHONY: satsbacker TAGS

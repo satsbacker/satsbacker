@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Bitsbacker.Cli where
+module Satsbacker.Cli where
 
 import Database.SQLite.Simple (Connection)
 import Control.Concurrent.MVar (MVar, withMVar)
@@ -9,15 +9,15 @@ import Data.Text (Text)
 
 import qualified Data.Text as T
 
-import Bitsbacker.Data.User
-import Bitsbacker.Data.Email
-import Bitsbacker.Server
-import Bitsbacker.Config
-import Bitsbacker.DB.Table (insert)
+import Satsbacker.Data.User
+import Satsbacker.Data.Email
+import Satsbacker.Server
+import Satsbacker.Config
+import Satsbacker.DB.Table (insert)
 
 createUserUsage :: IO ()
 createUserUsage = do
-  putStrLn "usage: bitsbacker create-user <name> <email> <password> [is-admin]"
+  putStrLn "usage: satsbacker create-user <name> <email> <password> [is-admin]"
   exitFailure
 
 
@@ -57,7 +57,7 @@ processArgs cfg@Config{..} arg rest =
 
 usage :: IO ()
 usage = do
-  putStrLn "usage: bitsbacker <command>"
+  putStrLn "usage: satsbacker <command>"
   putStrLn ""
   putStrLn "commands:"
   putStrLn ""

@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Bitsbacker.Data.TiersPage
+module Satsbacker.Data.TiersPage
     ( TiersPage(..)
     , mkTiersPage
     ) where
@@ -8,8 +8,8 @@ module Bitsbacker.Data.TiersPage
 import Data.Aeson
 import Data.Text (Text)
 
-import Bitsbacker.Data.User
-import Bitsbacker.Data.Tiers
+import Satsbacker.Data.User
+import Satsbacker.Data.Tiers
 
 
 data TiersPage = TiersPage {

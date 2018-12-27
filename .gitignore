@@ -1,10 +1,10 @@
 *.o
 *.hi
-/bitsbacker
+/satsbacker
 /archive/
 /.migrations
-/bitsbacker.db
+/satsbacker.db
 *.dyn_hi
 *.dyn_o
 /TAGS
-/bitsbacker-testnet.db
+/satsbacker-testnet.db

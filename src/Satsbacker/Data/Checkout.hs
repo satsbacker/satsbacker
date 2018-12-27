@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Bitsbacker.Data.Checkout
+module Satsbacker.Data.Checkout
     ( CheckoutPage(..)
     , getCheckoutPage
     , mkCheckout
@@ -12,13 +12,14 @@ module Bitsbacker.Data.Checkout
 import Control.Concurrent.MVar (withMVar, MVar)
 import Control.Exception (try, SomeException)
 import Data.Aeson
+import Data.Maybe (listToMaybe)
 import Data.String (IsString)
 import Database.SQLite.Simple (Connection)
 
-import Bitsbacker.Data.Tiers
-import Bitsbacker.Data.User
-import Bitsbacker.Config
-import Bitsbacker.Data.Invoice
+import Satsbacker.Data.Tiers
+import Satsbacker.Data.User
+import Satsbacker.Config
+import Satsbacker.Data.Invoice
 import Invoicing
 import Bitcoin.Denomination (MSats, toBits, showBits)
 
@@ -90,18 +91,19 @@ getCheckoutPage Config{..} InvoiceRef{..} = do
           uid  = tierUserId tdef
       muser <- withMVar cfgConn $ \conn -> getUserById conn uid
       user  <- maybe (fail $ "missing user " ++ show uid) return muser
-      print invRefInvoiceId
-      einv :: Either SomeException (Maybe Invoice) <-
+      invs :: Either SomeException [Invoice] <-
                 try $ listinvoices cfgRPC invRefInvoiceId
       return $
-        case einv of
-          Left err      -> Left $ InvoiceFetchFailed (show err)
-          Right Nothing -> Left $ InvoiceFetchFailed "missing"
-          Right (Just inv) -> Right $ CheckoutPage
+        case invs of
+          Left err    -> Left $ InvoiceFetchFailed (show err)
+          Right []    -> Left $ InvoiceFetchFailed "missing"
+          Right [inv] -> Right $ CheckoutPage
                                 { checkoutTier = tier
                                 , checkoutInvoice = inv
                                 , checkoutUser = user
                                 }
+          Right more ->
+            Left $ InvoiceFetchFailed "more than one invoice with the same id"
 
 mkCheckout :: Config -> TierId -> IO (Either CheckoutError Invoice)
 mkCheckout Config{..} tierId = do 

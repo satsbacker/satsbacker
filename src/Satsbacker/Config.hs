@@ -2,7 +2,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Bitsbacker.Config where
+module Satsbacker.Config where
 
 import Control.Concurrent.MVar
 import Control.Concurrent (forkIO)
@@ -19,9 +19,9 @@ import Data.Aeson.Types
 import Data.List.NonEmpty (NonEmpty)
 
 import Bitcoin.Network
-import Bitsbacker.DB
-import Bitsbacker.Logging
-import Bitsbacker.Data.Invoice
+import Satsbacker.DB
+import Satsbacker.Logging
+import Satsbacker.Data.Invoice
 
 import Network.RPC
 

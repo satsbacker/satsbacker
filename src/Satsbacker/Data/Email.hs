@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Bitsbacker.Data.Email
+module Satsbacker.Data.Email
     ( Email(..)
     ) where
 

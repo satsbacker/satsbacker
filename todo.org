@@ -1,12 +1,12 @@
-#+TITLE:    Bitsbacker
+#+TITLE:    Satsbacker
 #+AUTHOR:   William Casarin
 #+OPTIONS:   H:4 num:2 toc:t
 #+STARTUP:   lognoteclock-out
 #+SETUPFILE: styles/readtheorg.setup
-#+FILETAGS: bitsbacker
+#+FILETAGS: satsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2018-12-24 Mon 12:19]
+#+CAPTION: Clock summary at [2018-12-27 Thu 08:17]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
@@ -16,10 +16,11 @@
 * Todos
 
 
-** TODO Checkout page should be based on the invoice id
-** TODO Wait for invoice should check to see if its in DB before waiting
+** TODO QRCODES
+** TODO Insert subscription entry
+** TODO Add subscription entry on successful payment
 ** TODO Lightning button next to payment request with link
-** TODO Wait for payment SSE
+** TODO Show number of bits and backers on jk 
 
 ** TODO Show number of backers
 ** TODO Paywalled individual post

@@ -4,7 +4,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Bitsbacker.Data.Invoice
+module Satsbacker.Data.Invoice
     ( Invoice(..)
     , NewInvoice(..)
     , InvoiceRef(..)
@@ -12,10 +12,12 @@ module Bitsbacker.Data.Invoice
     , CLInvoice(..)
     , CLInvoices(..)
     , fromNewInvoice
+    , isPaid
     ) where
 
 import Data.Aeson
 import Data.Aeson.Types (Parser)
+import Data.Maybe (isJust)
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8)
 import Database.SQLite.Simple
@@ -24,9 +26,9 @@ import qualified Data.Vector as V
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Lazy as BL
 
-import Bitsbacker.Data.Email
-import Bitsbacker.Data.Tiers (TierId)
-import Bitsbacker.DB.Table
+import Satsbacker.Data.Email
+import Satsbacker.Data.Tiers (TierId)
+import Satsbacker.DB.Table
 
 import Bitcoin.Denomination (MSats(..), toBits, showBits)
 import Network.Lightning.Bolt11
@@ -106,6 +108,9 @@ data Invoice = Invoice {
     }
     deriving Show
 
+isPaid :: Invoice -> Bool
+isPaid = isJust . invoicePaidAt
+
 instance Table InvoiceRef where
     tableName _ = "invoices"
     tableFields _ = invoiceRefFields
@@ -119,7 +124,7 @@ instance FromRow InvoiceRef where
 newtype CLInvoice = CLInvoice { getCLInvoice :: Invoice }
     deriving Show
 
-newtype CLInvoices = CLInvoices { getCLInvoices :: Invoice }
+newtype CLInvoices = CLInvoices { getCLInvoices :: [Invoice] }
     deriving Show
 
 defaultInvoice :: Invoice
@@ -180,7 +185,7 @@ parseCLInvoice obj =
 
 instance FromJSON CLInvoices where
     parseJSON (Object obj) =
-        CLInvoices <$> (fmap getCLInvoice (obj .: "invoices"))
+        CLInvoices <$> (fmap (map getCLInvoice) (obj .: "invoices"))
     parseJSON _            = fail "unspected listinvoices value"
 
 instance FromJSON CLInvoice where

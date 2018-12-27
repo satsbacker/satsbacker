@@ -4,6 +4,11 @@
     padding: 1em;
 }
 
+.paid {
+    color: green;
+    font-weight: bold;
+}
+
 .centered {
     text-align: center;
 }

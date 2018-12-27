@@ -1,5 +1,5 @@
 
-module Bitsbacker.Logging
+module Satsbacker.Logging
     ( logError
     ) where
 

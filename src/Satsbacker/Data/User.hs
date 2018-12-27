@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Bitsbacker.Data.User where
+module Satsbacker.Data.User where
 
 import Control.Concurrent (MVar)
 import Crypto.PasswordStore (makePassword)
@@ -16,8 +16,8 @@ import Database.SQLite.Simple
 import Database.SQLite.Simple.FromField
 import Database.SQLite.Simple.ToField
 
-import Bitsbacker.DB.Table (Table(..))
-import Bitsbacker.Data.Email
+import Satsbacker.DB.Table (Table(..))
+import Satsbacker.Data.Email
 
 import qualified Data.Text as T
 
