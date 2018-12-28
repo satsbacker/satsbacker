@@ -8,3 +8,6 @@
 *.dyn_o
 /TAGS
 /satsbacker-testnet.db
+/result
+/*.save0
+/dist

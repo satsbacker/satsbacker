@@ -104,7 +104,7 @@ testTierData userId =
         }
   in
   [
-    newT 1 (bits 100) "Don't have much? That's ok, everything helps!"
+    newT 1 (bits 100) "Don't have much? That's ok, every bit helps!"
   , newT 5 (bits 1000) "Gain access to periodic backer-only blog posts and updates"
   , newT 15 (bits 5000) $ T.unwords $
       "In addition to the previous levels, " :

@@ -3,25 +3,33 @@
 
 module Network.RPC.CLightning where
 
-import Control.Lens
 import Data.Maybe (maybe)
 import Control.Monad.IO.Class (MonadIO(..))
-import Data.Aeson.Lens (key, _String)
-import Data.Aeson (Value)
+import Data.Aeson (Value(..))
 import Data.Text (Text)
 import Network.RPC
 import Network.RPC.CLightning.Peer
 import Network.RPC.CLightning.Output
 import Satsbacker.Data.Invoice
 
+import qualified Data.HashMap.Lazy as Map
+
 listpeers :: MonadIO m => SocketConfig -> m [Peer]
 listpeers cfg = getPeersResp <$> rpc_ cfg "listpeers"
+
+keyStr :: Text -> Value -> Maybe Text
+keyStr str (Object obj) =
+  case Map.lookup str obj of
+    Just (String txt) -> Just txt
+    Just _            -> Nothing
+    Nothing           -> Nothing
+keyStr _ _ = Nothing
 
 newaddr :: MonadIO m => SocketConfig -> Text -> m Text
 newaddr cfg addrtype = do
   res :: Value <- rpc cfg "newaddr" [addrtype]
   maybe (fail "Could not decode address from newaddr") return
-        (res ^? key "address" . _String)
+        (keyStr "address" res)
 
 listfunds :: MonadIO m => SocketConfig -> m [Output]
 listfunds cfg = listFundsOutputs <$> rpc_ cfg "listfunds"

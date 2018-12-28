@@ -6,7 +6,7 @@
 #+FILETAGS: satsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2018-12-28 Fri 10:26]
+#+CAPTION: Clock summary at [2018-12-28 Fri 10:40]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
@@ -16,6 +16,8 @@
 * Todos
 
 ** TODO Package for deployment
+** TODO Backer stats needs to take into account subscription expiry
+** TODO Adjust tiers
 ** TODO Successful payment page
 
 Perhaps this should just go right to the subscription view?
