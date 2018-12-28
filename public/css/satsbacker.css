@@ -4,6 +4,10 @@
     padding: 1em;
 }
 
+.smooth {
+    transition: all 0.1s linear;
+}
+
 .paid {
     color: green;
     font-weight: bold;
@@ -62,6 +66,11 @@ input.payreq {
 .card-tier {
     min-height: 15em;
     max-height: 15em;
+}
+
+.hide {
+    opacity: 0;
+    display: none;
 }
 
 .tier {

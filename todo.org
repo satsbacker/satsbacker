@@ -6,7 +6,7 @@
 #+FILETAGS: satsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2018-12-27 Thu 16:03]
+#+CAPTION: Clock summary at [2018-12-28 Fri 10:26]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
@@ -15,16 +15,13 @@
 
 * Todos
 
-** TODO Add subscription entry on successful payment
+** TODO Package for deployment
 ** TODO Successful payment page
 
 Perhaps this should just go right to the subscription view?
 
 ** TODO Email with receipt
 
-** TODO Lightning button next to payment request with link
-
-** TODO Show number of bits and backers
 ** TODO Paywalled individual post
 ** TODO Public and backer posts
 
@@ -38,3 +35,5 @@ If you become a backer, you immediately get access to N backer-only posts
 ** TODO Tiers
 Pledge 100 bits more more per month, etc
 
+
+** TODO Lightning button next to payment request with link

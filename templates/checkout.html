@@ -11,7 +11,7 @@
     <div class="hero">
         <h1>Back <b>{{user.name}}</b> at <b>{{invoice.amount_bits}}</b> bits per month</h1>
     </div>
-    <div class="container">
+    <div class="container smooth" id="main">
         <div class="row">
             <div class="four columns">
                 <label for="expiry">Expires At</label>
@@ -59,6 +59,12 @@
             </div>
         </div>
     </div>
+    <div class="container smooth hide" id="pay-success">
+        <label for="id">Invoice Id</label>
+        <p>{{invoice.id}}</p>
+        <p class="paid">Payment Received!</p>
+        <p>Thank you for supporting satsbacker development!</p>
+    </div>
 </body>
 <script type="text/javascript" src="/js/qrcode-svg.js"></script>
 <script>
@@ -76,10 +82,12 @@
 
      var es = new EventSource('/payment-stream/{{invoice.id}}')
 
-     var container = document.querySelector(".container");
+     var container = document.getElementById("main");
+     var successContainer = document.getElementById("pay-success");
 
      es.addEventListener('paid', msg => {
-         container.innerHTML = "<p class=\"paid\">Payment Received!</p>";
+         successContainer.classList.remove("hide");
+         container.classList.add("hide");
          es.close();
      })
 

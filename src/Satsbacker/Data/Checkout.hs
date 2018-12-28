@@ -80,7 +80,7 @@ mkInvoiceDesc :: Username -> MSats -> Text -> Text
 mkInvoiceDesc (Username name) msat desc =
     "Back " <> name <> " at " <> T.pack amountBits <> " bits per month: " <> desc
     where
-      amountBits = showBits (toBits msat) 
+      amountBits = showBits (toBits msat)
 
 getCheckoutPage :: Config -> InvoiceRef -> IO (Either CheckoutError CheckoutPage)
 getCheckoutPage Config{..} InvoiceRef{..} = do
@@ -107,7 +107,7 @@ getCheckoutPage Config{..} InvoiceRef{..} = do
             Left $ InvoiceFetchFailed "more than one invoice with the same id"
 
 mkCheckout :: Config -> TierId -> IO (Either CheckoutError Invoice)
-mkCheckout Config{..} tierId = do 
+mkCheckout Config{..} tierId = do
   etier <- safeGetTierById cfgConn tierId
   case etier of
     Left err  -> return (Left err)
