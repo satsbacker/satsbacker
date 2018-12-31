@@ -32,14 +32,22 @@
             <div class="one-half column card-pay">
                 <label for="invoice">Payment Request</label>
                 <div class="qrpayreq qrcode"></div>
-                <input class="u-full-width payreq" type="text" readonly value="{{invoice.payreq}}"></input>
+                <input onclick="this.setSelectionRange(0, this.value.length)"
+                       class="u-full-width payreq"
+                       type="text"
+                       readonly
+                       value="{{invoice.payreq}}"></input>
 
             </div>
             <div class="one-half column card-pay">
                 <label for="peer">Connect</label>
                 <p>You can use this to open an initial payment channel if you haven't already</p>
                 <div class="qrpeer qrcode"></div>
-                <input class="u-full-width peer" type="text" readonly value="{{config.peer}}"></input>
+                <input onclick="this.setSelectionRange(0, this.value.length)"
+                       class="u-full-width peer"
+                       type="text"
+                       readonly
+                       value="{{config.peer}}"></input>
             </div>
         </div>
         <div class="row">
