@@ -75,13 +75,6 @@ lookupUserPage cfg@Config{..} templ = do
   renderTemplate cfg templ userPage
 
 
-simplePage :: ToJSON a => Template -> a -> ActionM ()
-simplePage templ val = html page
-  where
-    (_warnings, page) = renderMustacheW templ (toJSON val)
-
-
-
 withUser :: MVar Connection -> ActionM (UserId, User)
 withUser mvconn = do
   username <- param "user"
@@ -106,10 +99,12 @@ newtype MergedConfig a = MergedConfig { getMergedConfig :: (Config, a) }
 
 instance ToJSON a => ToJSON (MergedConfig a) where
     toJSON (MergedConfig (cfg, val)) =
+        let
+            cfgObj cfgj v = Object (Map.insert "config" cfgj v)
+        in
         case (toJSON val, toJSON cfg) of
-          (Object valObj, cfgJson) ->
-            Object (Map.insert "config" cfgJson valObj)
-          (valJson, _) -> valJson -- don't merge if we see a non-object
+          (Object valObj, cfgJson) -> cfgObj cfgJson valObj
+          (_, cfgJson)             -> cfgObj cfgJson mempty -- don't merge if we see a non-object
 
 renderTemplate :: ToJSON a => Config -> Template -> a -> ActionM ()
 renderTemplate cfg templ val =
@@ -154,7 +149,7 @@ getCheckout cfg@Config{..} templ = do
 
 routes :: Config -> Template -> ScottyM ()
 routes cfg@Config{..} templates = do
-  get  "/"                     (simplePage (t "home") ())
+  get  "/"                     (renderTemplate cfg (t "home") ())
   get  "/signup"               (content signup)
   post "/signup"               postSignup
   get  "/:user"                (lookupUserPage cfg (t "user"))
