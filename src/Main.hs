@@ -10,7 +10,6 @@ import System.Environment (getArgs)
 
 import Satsbacker.Cli
 import Satsbacker.Config
-import Satsbacker.Data.User
 
 import qualified Data.Text as T
 
