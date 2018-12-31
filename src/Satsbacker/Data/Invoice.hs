@@ -66,12 +66,15 @@ instance FromJSON NewInvoice where
     parseJSON _            = fail "NewInvoice: expected bolt11 field"
 
 instance ToRow InvoiceRef where
-    toRow InvoiceRef{..} =
-        toRow ( getInvId invRefInvoiceId
-              , invRefTierId
-              , invRefEmail
-              , fmap getUserId invRefPayerId
-              )
+    toRow invRef =
+        let
+            InvoiceRef f1 f2 f3 f4 = invRef
+        in
+          toRow ( getInvId f1
+                , f2
+                , f3
+                , fmap getUserId f4
+                )
 
 invoiceRefFields :: [Text]
 invoiceRefFields =

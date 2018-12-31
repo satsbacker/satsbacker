@@ -52,15 +52,6 @@ postSignup = do
   text (name <> email)
 
 
-signup :: Html ()
-signup = do
-  template (Just "signup") $ do
-    h1_ "Signup"
-    form_ $ do
-      textInput "name"
-      textInput "email"
-
-
 getTemplate :: Template -> PName -> Template
 getTemplate templates pname =
     templates { templateActual = pname }
@@ -147,10 +138,14 @@ getCheckout cfg@Config{..} templ = do
     Right checkoutPage -> renderTemplate cfg templ checkoutPage
 
 
+simplePage :: Config -> Template -> ActionM ()
+simplePage cfg t = renderTemplate cfg t ()
+
+
 routes :: Config -> Template -> ScottyM ()
 routes cfg@Config{..} templates = do
-  get  "/"                     (renderTemplate cfg (t "home") ())
-  get  "/signup"               (content signup)
+  get  "/"                     (simplePage cfg (t "home"))
+  get  "/signup"               (simplePage cfg (t "signup"))
   post "/signup"               postSignup
   get  "/:user"                (lookupUserPage cfg (t "user"))
   get  "/back/:user"           (tiersPage cfg (t "back"))

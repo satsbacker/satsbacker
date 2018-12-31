@@ -86,14 +86,12 @@ instance FromRow User where
                  <*> field
 
 instance ToRow User where
-  toRow User{..} =
-      toRow ( userName
-            , userPassword
-            , userEmail
-            , userEmailConfirmed
-            , userPermissions
-            , userMaking
-            )
+  toRow user =
+      let
+          User f1 f2 f3 f4 f5 f6 = user
+      in
+        toRow (f1, f2, f3, f4, f5, f6)
+
 
 instance ToJSON User where
     toJSON User{..} =

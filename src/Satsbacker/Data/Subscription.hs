@@ -21,9 +21,9 @@ instance Table Subscription where
 subscriptionFields :: [Text]
 subscriptionFields =
     [ "for_user"
-    , "user_id" 
-    , "user_email" 
-    , "user_cookie" 
+    , "user_id"
+    , "user_email"
+    , "user_cookie"
     , "valid_until"
     , "tier_id"
     ]
@@ -39,11 +39,14 @@ data Subscription = Subscription
 
 
 instance ToRow Subscription where
-    toRow Subscription{..} =
-        toRow ( getUserId subForUser
-              , fmap getUserId subPayerId
-              , subPayerEmail
-              , subPayerCookie
-              , subValidUntil
-              , subTierId
-              )
+    toRow sub =
+        let
+            Subscription f1 f2 f3 f4 f5 f6 = sub
+        in
+          toRow ( getUserId f1
+                , fmap getUserId f2
+                , f3
+                , f4
+                , f5
+                , f6
+                )

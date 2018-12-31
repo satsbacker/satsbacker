@@ -8,6 +8,7 @@ module Satsbacker.DB.Table
     , fetchOne
     , Search(..)
     , search
+    , searchAny
     , Limit(..)
     , onlyOne
     , noLimit
@@ -40,6 +41,8 @@ noLimit = Limit 0
 search :: Text -> a -> Search a
 search t v = Search (t,v)
 
+searchAny :: Search Int
+searchAny = Search ("1", 1)
 
 insert :: (Table a, ToRow a) => Connection -> a -> IO Int
 insert conn row = do

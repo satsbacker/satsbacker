@@ -26,6 +26,7 @@ import Satsbacker.DB
 import Satsbacker.DB.Table
 import Satsbacker.Data.Invoice
 import Satsbacker.Data.InvoiceId
+import Satsbacker.Data.Site (Site(..))
 import Satsbacker.Data.Subscription
 import Satsbacker.Data.Tiers (TierDef(..))
 import Satsbacker.Logging
@@ -43,6 +44,7 @@ data Config = Config {
     , cfgRPC       :: SocketConfig
     , cfgPayNotify :: MVar WaitInvoice
     , cfgLnConfig  :: LightningConfig
+    , cfgSite      :: Site
     }
 
 cfgNetwork :: Config -> BitcoinNetwork
@@ -76,13 +78,16 @@ instance FromJSON LightningConfig where
     parseJSON _ = fail "could not parse clightning getinfo config"
 
 instance ToJSON Config where
-    toJSON cfg@Config{..} =
-        let network = cfgNetwork cfg
+    toJSON cfg =
+        let
+            Config _ _ _ lncfg site = cfg
+            network = lncfgNetwork lncfg
         in
           object
             [ "network"    .= network
             , "is_testnet" .= (network == Testnet)
-            , "peer"       .= showLnPeer cfgLnConfig
+            , "peer"       .= showLnPeer lncfg
+            , "site"       .= site
             ]
 
 
@@ -189,9 +194,17 @@ getConfig = do
   conn <- openDb (lncfgNetwork lncfg)
   migrate conn
   payindex <- getPayIndex conn
+  msite <- fetchOne conn searchAny
+  site <- maybe (fail "could not find site config, corrupt?") return msite
   mvconn <- newMVar conn
   mvnotify <- newEmptyMVar
-  let cfg = Config mvconn socketCfg mvnotify lncfg
+  let cfg = Config {
+              cfgConn       = mvconn
+            , cfgRPC        = socketCfg
+            , cfgPayNotify  = mvnotify
+            , cfgLnConfig   = lncfg
+            , cfgSite       = site
+            }
   _ <- forkIO (waitInvoices 0 payindex cfg)
   return cfg
 

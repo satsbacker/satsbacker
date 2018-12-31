@@ -6,16 +6,28 @@
 #+FILETAGS: satsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2018-12-31 Mon 08:21]
+#+CAPTION: Clock summary at [2018-12-31 Mon 16:18]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
 #+END:
 
+* User registration
+
+** DONE Convert signup page to template
+CLOSED: [2018-12-31 Mon 16:18]
+** TODO Test signup
+** TODO Email confirmation
+** TODO On confirmation, associate subscriptions
 
 * Todos
 
-** TODO Single click copy for node connection
+** TODO Implement open source goal
+** TODO Goals - bits per month [0/1]
+
+- [ ] Goals only activate after N sustained months
+
+** TODO Configurable denomination
 ** TODO Stripe support
 ** TODO Streak tracking
 ** TODO Re-subscribe email
@@ -23,13 +35,6 @@
 - [ ] Show streak
 
 Should have streaks implemented before this
-
-** TODO Configurable denomination
-** TODO Goals - bits per month [0/1]
-
-- [ ] Goals only activate after N sustained months
-
-** TODO Implement open source goal
 
 ** TODO Backer stats needs to take into account subscription expiry
 

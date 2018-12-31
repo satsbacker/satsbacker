@@ -62,7 +62,12 @@ migrations = [
      \)", -- 5
 
      "CREATE TABLE payindex (payindex INTEGER)", -- 6
-     "INSERT INTO payindex (payindex) VALUES (0)" -- 7
+     "INSERT INTO payindex (payindex) VALUES (0)", -- 7
+
+     "CREATE TABLE site (id INTERGER PRIMARY KEY,\
+     \ name TEXT NOT NULL)", -- 8
+
+     "INSERT INTO site (name) VALUES ('satsbacker')" -- 9
   ]
 
 hasVersionTable :: Connection -> IO Bool

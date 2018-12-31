@@ -123,14 +123,17 @@ instance FromRow TierStats where
 
 
 instance ToRow TierDef where
-  toRow TierDef{..} =
-      toRow ( tierDescription
-            , tierQuota
-            , getUserId tierUserId
-            , tierAmountFiat
-            , getMsats tierAmountMSats
-            , tierType
-            )
+  toRow tdef =
+      let
+          TierDef f1 f2 f3 f4 f5 f6 = tdef
+      in
+        toRow ( f1
+              , f2
+              , getUserId f3
+              , f4
+              , getMsats f5
+              , f6
+              )
 
 
 instance FromRow TierDef where
