@@ -6,7 +6,7 @@
 #+FILETAGS: satsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2018-12-28 Fri 10:40]
+#+CAPTION: Clock summary at [2018-12-31 Mon 08:21]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
@@ -15,25 +15,35 @@
 
 * Todos
 
-** TODO Package for deployment
+** TODO Single click copy for node connection
+** TODO Stripe support
+** TODO Streak tracking
+** TODO Re-subscribe email
+
+- [ ] Show streak
+
+Should have streaks implemented before this
+
+** TODO Configurable denomination
+** TODO Goals - bits per month [0/1]
+
+- [ ] Goals only activate after N sustained months
+
+** TODO Implement open source goal
+
 ** TODO Backer stats needs to take into account subscription expiry
-** TODO Adjust tiers
-** TODO Successful payment page
 
-Perhaps this should just go right to the subscription view?
-
-** TODO Email with receipt
-
+** TODO Paypal support
 ** TODO Paywalled individual post
 ** TODO Public and backer posts
 
+** TODO Tier admin
 ** TODO Mailing list
 ** TODO Mailing list preferences
 
 ** TODO Streak highscore board
 ** TODO Leads
 If you become a backer, you immediately get access to N backer-only posts
-** TODO Goals - bits per month
 ** TODO Tiers
 Pledge 100 bits more more per month, etc
 
