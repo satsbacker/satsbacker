@@ -4,6 +4,7 @@
 
 module Satsbacker.Templates where
 
+
 import Data.List (isSuffixOf)
 import Text.Mustache
 
@@ -12,3 +13,5 @@ loadTemplates = do
   compileMustacheDir' (isSuffixOf ".html")
                       (PName "user")
                       "templates"
+
+

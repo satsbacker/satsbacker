@@ -7,12 +7,18 @@
     <body>
         {{>header}}
         <div class="container">
-            <form>
-                <label for="name">Name</label>
+            <h1>Sign up</h1>
+            <form method="post" action="/signup">
+                <label for="name">Username</label>
                 <input class="u-full-width" type="text" id="name"></input>
 
                 <label for="email">Email</label>
                 <input class="u-full-width" type="text" id="email"></input>
+
+                <label for="password">Password</label>
+                <input class="u-full-width" type="password"></input>
+
+                <input class="u-full-width button button-large button-primary" type="submit" value="Signup"></input>
             </form>
         </div>
     </body>

@@ -17,7 +17,7 @@ import Database.SQLite.Simple
 import Database.SQLite.Simple.FromField
 import Database.SQLite.Simple.ToField
 
-import Satsbacker.DB.Table (Table(..))
+import Database.SQLite.Table (Table(..))
 import Satsbacker.Data.Email
 
 import qualified Data.Text as T

@@ -10,7 +10,7 @@ import Data.Text (Text)
 import Satsbacker.Data.Tiers (TierId(..))
 import Satsbacker.Data.User (UserId(..))
 import Satsbacker.Data.Email (Email)
-import Satsbacker.DB.Table (Table(..))
+import Database.SQLite.Table (Table(..))
 
 import Database.SQLite.Simple
 

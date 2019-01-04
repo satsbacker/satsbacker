@@ -21,6 +21,7 @@ executable satsbacker
   other-modules: Bitcoin.Bech32
                  Bitcoin.Denomination
                  Bitcoin.Network
+                 Database.SQLite.Table
                  Invoicing
                  Network.Lightning.Bolt11
                  Network.RPC
@@ -38,7 +39,6 @@ executable satsbacker
                  Satsbacker.Cli
                  Satsbacker.Config
                  Satsbacker.DB
-                 Satsbacker.DB.Table
                  Satsbacker.Data.Checkout
                  Satsbacker.Data.Email
                  Satsbacker.Data.Invoice

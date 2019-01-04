@@ -4,21 +4,21 @@
 
 module Satsbacker.Server where
 
-import Control.Concurrent (MVar, withMVar)
 import Control.Applicative (optional)
+import Control.Concurrent (MVar, withMVar)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import Database.SQLite.Simple (Connection)
+import Database.SQLite.Simple
 import Lucid
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Static (staticPolicy, addBase)
 import System.Environment (lookupEnv)
+import System.Posix.Env (putEnv)
 import Text.Mustache
 import Text.Read (readMaybe)
 import Web.Scotty
-import System.Posix.Env (putEnv)
 
 import Invoicing
 
@@ -33,23 +33,52 @@ import Satsbacker.Data.User
 import Satsbacker.Html
 import Satsbacker.Logging
 import Satsbacker.Templates
-import Satsbacker.DB.Table
+import Database.SQLite.Table
+import Crypto.Macaroons (Macaroon)
+import Web.Cookie
+import qualified Crypto.Macaroons as Macaroon
 
 
 import qualified Data.HashMap.Lazy as Map
 import qualified Data.Text.Lazy as LT
 
 
-home :: Html ()
-home = do
-  template Nothing $ do
-    h1_ "Hello, world!"
+data Page = Dashboard
 
-postSignup :: ActionM ()
-postSignup = do
+redirectTo page =
+    let
+        r = case page of
+              Dashboard -> "/dashboard"
+    in
+      redirect r
+
+getSignup :: Config -> Template -> ActionM ()
+getSignup cfg@Config{..} templ = simplePage cfg templ
+
+setAuthCookie :: Macaroon -> SetCookie
+setAuthCookie macaroon =
+  defaultSetCookie {
+    setCookieName  = "session"
+  , setCookieValue = Macaroon.serialize macaroon
+  }
+
+postSignup :: Config -> Template -> ActionM ()
+postSignup cfg@Config{..} templ = do
   name  <- param "name"
   email <- param "email"
-  text (name <> email)
+  pass  <- param "password"
+
+  muser <- liftIO $ withMVar cfgConn $ \conn ->
+    query conn "select id from users where name = ? or email = ?" (name, email)
+
+  case muser of
+    Just (Only id) ->
+        signupError "A user with that username or email already exists"
+    Nothing -> do setCookie
+                  redirectTo Dashboard
+  where
+    signupError msg = do
+      renderTemplate config (merged "validation" () conf)
 
 
 getTemplate :: Template -> PName -> Template
@@ -86,20 +115,21 @@ tiersPage cfg@Config{..} templ = do
 checkoutErrorPage :: CheckoutError -> ActionM ()
 checkoutErrorPage = raise . describeCheckoutError
 
-newtype MergedConfig a = MergedConfig { getMergedConfig :: (Config, a) }
+newtype Merged a into = Merged { getMergedConfig :: ((Text, a), into) }
 
-instance ToJSON a => ToJSON (MergedConfig a) where
-    toJSON (MergedConfig (cfg, val)) =
+instance (ToJSON a, ToJSON into) => ToJSON (Merged a into) where
+    toJSON (Merged ((key, obj), intoVal)) =
         let
-            cfgObj cfgj v = Object (Map.insert "config" cfgj v)
+            cfgObj v intoV = Object (Map.insert key v intoV)
         in
-        case (toJSON val, toJSON cfg) of
-          (Object valObj, cfgJson) -> cfgObj cfgJson valObj
-          (_, cfgJson)             -> cfgObj cfgJson mempty -- don't merge if we see a non-object
+        case (toJSON intoVal, toJSON obj) of
+          (Object intoV, valJson) -> cfgObj valJson intoV
+          (_, valJson)            -> cfgObj valJson mempty -- don't merge if we see a non-object
+merged key v into = Merged ((key, v), into)
 
 renderTemplate :: ToJSON a => Config -> Template -> a -> ActionM ()
 renderTemplate cfg templ val =
-    let templateData = MergedConfig (cfg, val)
+    let templateData = Merged (("config", cfg), val)
         templateJson = toJSON templateData
         (_w, rendered) = renderMustacheW templ templateJson
     in html rendered
@@ -145,8 +175,8 @@ simplePage cfg t = renderTemplate cfg t ()
 routes :: Config -> Template -> ScottyM ()
 routes cfg@Config{..} templates = do
   get  "/"                     (simplePage cfg (t "home"))
-  get  "/signup"               (simplePage cfg (t "signup"))
-  post "/signup"               postSignup
+  get  "/signup"               (getSignup cfg signupTemplate)
+  post "/signup"               (postSignup cfg signupTemplate)
   get  "/:user"                (lookupUserPage cfg (t "user"))
   get  "/back/:user"           (tiersPage cfg (t "back"))
   post "/checkout/:tier_id"    (postCheckout cfg)
@@ -154,6 +184,7 @@ routes cfg@Config{..} templates = do
   invoiceRoutes cfg
   middleware (static "public")
   where
+    signupTemplate = t "signup"
     t = getTemplate templates
 
 

@@ -6,7 +6,7 @@
 #+FILETAGS: satsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2018-12-31 Mon 16:18]
+#+CAPTION: Clock summary at [2019-01-01 Tue 17:08]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
@@ -14,8 +14,6 @@
 
 * User registration
 
-** DONE Convert signup page to template
-CLOSED: [2018-12-31 Mon 16:18]
 ** TODO Test signup
 ** TODO Email confirmation
 ** TODO On confirmation, associate subscriptions

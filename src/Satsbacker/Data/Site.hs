@@ -8,7 +8,7 @@ import Data.Text (Text)
 import Data.Aeson
 import Database.SQLite.Simple
 
-import Satsbacker.DB.Table (Table(..))
+import Database.SQLite.Table (Table(..))
 
 
 data Site = Site {

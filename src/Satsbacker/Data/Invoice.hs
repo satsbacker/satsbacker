@@ -30,7 +30,7 @@ import Satsbacker.Data.Email
 import Satsbacker.Data.InvoiceId (InvId(..))
 import Satsbacker.Data.Tiers (TierId)
 import Satsbacker.Data.User (UserId(..))
-import Satsbacker.DB.Table
+import Database.SQLite.Table
 
 import Bitcoin.Denomination (MSats(..), toBits, showBits)
 import Network.Lightning.Bolt11

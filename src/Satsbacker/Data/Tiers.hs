@@ -12,7 +12,7 @@ import Database.SQLite.Simple.FromField
 import Data.Aeson
 
 import Bitcoin.Denomination
-import Satsbacker.DB.Table
+import Database.SQLite.Table
 import Satsbacker.Data.User (UserId(..))
 
 import qualified Data.HashMap.Lazy as M

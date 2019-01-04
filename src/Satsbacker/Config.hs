@@ -22,8 +22,8 @@ import Data.List.NonEmpty (NonEmpty)
 import System.Posix.Time (epochTime)
 
 import Bitcoin.Network
+import Database.SQLite.Table
 import Satsbacker.DB
-import Satsbacker.DB.Table
 import Satsbacker.Data.Invoice
 import Satsbacker.Data.InvoiceId
 import Satsbacker.Data.Site (Site(..))
