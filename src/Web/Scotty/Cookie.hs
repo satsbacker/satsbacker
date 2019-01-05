@@ -53,6 +53,7 @@ import Data.Time.Clock.POSIX ( posixSecondsToUTCTime )
 
 import Blaze.ByteString.Builder ( toLazyByteString )
 
+import Web.Scotty
 import Web.Scotty.Trans
 import Web.Cookie
 
@@ -65,9 +66,7 @@ makeSimpleCookie n v = def { setCookieName  = TS.encodeUtf8 n
                            }
 
 
-setCookie :: (Monad m, ScottyError e)
-          => SetCookie
-          -> ActionT e m ()
+setCookie :: (Monad m) => SetCookie -> ActionM ()
 setCookie c = addHeader "Set-Cookie" (TL.decodeUtf8 . toLazyByteString $ renderSetCookie c)
 
 

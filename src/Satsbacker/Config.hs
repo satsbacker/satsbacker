@@ -30,6 +30,7 @@ import Satsbacker.Data.Site (Site(..))
 import Satsbacker.Data.Subscription
 import Satsbacker.Data.Tiers (TierDef(..))
 import Satsbacker.Logging
+import Crypto.Macaroons (Secret(..))
 
 import Network.RPC
 
@@ -45,6 +46,7 @@ data Config = Config {
     , cfgPayNotify :: MVar WaitInvoice
     , cfgLnConfig  :: LightningConfig
     , cfgSite      :: Site
+    , cfgSecret    :: Secret
     }
 
 cfgNetwork :: Config -> BitcoinNetwork
@@ -80,7 +82,7 @@ instance FromJSON LightningConfig where
 instance ToJSON Config where
     toJSON cfg =
         let
-            Config _ _ _ lncfg site = cfg
+            Config _ _ _ lncfg site _ = cfg
             network = lncfgNetwork lncfg
         in
           object
@@ -204,6 +206,7 @@ getConfig = do
             , cfgPayNotify  = mvnotify
             , cfgLnConfig   = lncfg
             , cfgSite       = site
+            , cfgSecret     = Secret "secret" -- TODO: macaroon secret
             }
   _ <- forkIO (waitInvoices 0 payindex cfg)
   return cfg

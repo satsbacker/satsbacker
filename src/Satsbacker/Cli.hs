@@ -14,7 +14,7 @@ import qualified Data.Text as T
 import Bitcoin.Denomination
 
 import Satsbacker.Config
-import Satsbacker.DB.Table (insert)
+import Database.SQLite.Table (insert)
 import Satsbacker.Data.Email
 import Satsbacker.Data.Tiers
 import Satsbacker.Data.User

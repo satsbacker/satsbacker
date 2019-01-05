@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 
@@ -8,10 +9,10 @@ import Control.Applicative (optional)
 import Control.Concurrent (MVar, withMVar)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
-import Data.Maybe (fromMaybe)
+import Data.ByteString.Builder (toLazyByteString)
+import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Text (Text)
 import Database.SQLite.Simple
-import Lucid
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Static (staticPolicy, addBase)
 import System.Environment (lookupEnv)
@@ -22,6 +23,8 @@ import Web.Scotty
 
 import Invoicing
 
+import Crypto.Macaroons
+import Database.SQLite.Table
 import Satsbacker.Config
 import Satsbacker.Data.Checkout
 import Satsbacker.Data.Email
@@ -30,21 +33,20 @@ import Satsbacker.Data.InvoiceId (InvId(..))
 import Satsbacker.Data.Tiers
 import Satsbacker.Data.TiersPage
 import Satsbacker.Data.User
-import Satsbacker.Html
 import Satsbacker.Logging
+import Satsbacker.Macaroons
 import Satsbacker.Templates
-import Database.SQLite.Table
-import Crypto.Macaroons (Macaroon)
 import Web.Cookie
+
 import qualified Crypto.Macaroons as Macaroon
-
-
 import qualified Data.HashMap.Lazy as Map
 import qualified Data.Text.Lazy as LT
+import qualified Data.Text.Lazy.Encoding as TL
 
 
 data Page = Dashboard
 
+redirectTo :: Page -> ActionM a
 redirectTo page =
     let
         r = case page of
@@ -55,31 +57,44 @@ redirectTo page =
 getSignup :: Config -> Template -> ActionM ()
 getSignup cfg@Config{..} templ = simplePage cfg templ
 
-setAuthCookie :: Macaroon -> SetCookie
-setAuthCookie macaroon =
+authCookie :: Macaroon -> SetCookie
+authCookie macaroon =
   defaultSetCookie {
     setCookieName  = "session"
   , setCookieValue = Macaroon.serialize macaroon
   }
 
+
+
+setCookie :: SetCookie -> ActionM ()
+setCookie c =
+  addHeader "Set-Cookie" (TL.decodeUtf8 . toLazyByteString $ renderSetCookie c)
+
+
 postSignup :: Config -> Template -> ActionM ()
 postSignup cfg@Config{..} templ = do
-  name  <- param "name"
-  email <- param "email"
-  pass  <- param "password"
+  name  <- fmap Username (param "name")
+  email <- fmap Email (param "email")
+  pass  <- fmap Plaintext (param "password")
 
-  muser <- liftIO $ withMVar cfgConn $ \conn ->
-    query conn "select id from users where name = ? or email = ?" (name, email)
+  muser <- liftIO $ fmap listToMaybe $ withMVar cfgConn $ \conn ->
+    query conn "select id from users where name = ? or email = ? limit 1" (name, email)
 
   case muser of
-    Just (Only id) ->
-        signupError "A user with that username or email already exists"
-    Nothing -> do sessionMacaroon cfgSecret
-                  setAuthCookie m
+    Just (Only (_id :: Int)) ->
+      signupError "A user with that username or email already exists"
+    Nothing -> do u <- liftIO (createUser pass)
+                  let user = u { userName = name
+                               , userEmail = email
+                               }
+                  userId <- liftIO $ withMVar cfgConn $ \conn -> insert conn user
+                  m <- liftIO (sessionMacaroon cfgSecret (UserId userId))
+                  setCookie (authCookie m)
                   redirectTo Dashboard
   where
+    signupError :: Text -> ActionM ()
     signupError msg = do
-      renderTemplate config (merged "validation" () conf)
+      renderTemplate cfg templ (merged "validation" ()  cfg)
 
 
 getTemplate :: Template -> PName -> Template
@@ -126,6 +141,8 @@ instance (ToJSON a, ToJSON into) => ToJSON (Merged a into) where
         case (toJSON intoVal, toJSON obj) of
           (Object intoV, valJson) -> cfgObj valJson intoV
           (_, valJson)            -> cfgObj valJson mempty -- don't merge if we see a non-object
+
+merged :: Text -> a -> into -> Merged a into
 merged key v into = Merged ((key, v), into)
 
 renderTemplate :: ToJSON a => Config -> Template -> a -> ActionM ()
