@@ -6,7 +6,7 @@
 #+FILETAGS: satsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2019-01-01 Tue 17:08]
+#+CAPTION: Clock summary at [2019-01-04 Fri 20:57]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
@@ -14,12 +14,12 @@
 
 * User registration
 
-** TODO Test signup
 ** TODO Email confirmation
 ** TODO On confirmation, associate subscriptions
+** TODO Dashboard
+
 
 * Todos
-
 ** TODO Implement open source goal
 ** TODO Goals - bits per month [0/1]
 

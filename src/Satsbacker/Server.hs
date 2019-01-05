@@ -94,7 +94,8 @@ postSignup cfg@Config{..} templ = do
   where
     signupError :: Text -> ActionM ()
     signupError msg = do
-      renderTemplate cfg templ (merged "validation" ()  cfg)
+      let validation = object [ "error" .= msg ]
+      renderTemplate cfg templ (merged "validation" validation cfg)
 
 
 getTemplate :: Template -> PName -> Template
