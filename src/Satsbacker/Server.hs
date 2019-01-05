@@ -74,7 +74,8 @@ postSignup cfg@Config{..} templ = do
   case muser of
     Just (Only id) ->
         signupError "A user with that username or email already exists"
-    Nothing -> do setCookie
+    Nothing -> do sessionMacaroon cfgSecret
+                  setAuthCookie m
                   redirectTo Dashboard
   where
     signupError msg = do
