@@ -108,8 +108,9 @@ caveatBytes (ThirdParty cid_ vid_ _cl) =
     getVId vid_ `BS.append` getCId cid_
 
 
-addCaveat :: Caveat -> Macaroon -> Macaroon
-addCaveat c m =
+
+addCaveat :: Macaroon -> Caveat -> Macaroon
+addCaveat m c =
     m { macaroonCaveats   = cavs ++ [c]
       , macaroonSignature = sig
       }
@@ -201,10 +202,12 @@ isValidSig k Macaroon{..} =
     hash s c   = toBytes (hmac s (caveatBytes c) :: HMAC SHA256)
     derivedKey = toBytes (hmac magicKey (getSecret k) :: HMAC SHA256)
 
+
 data VerificationResult = Verified
                         | Refused
                         | Unrelated
                         deriving (Show, Eq, Ord)
+
 
 type Verifier f = Macaroon -> Caveat -> f VerificationResult
 

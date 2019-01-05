@@ -24,8 +24,8 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as Lazy
 
 
-openCloseSum :: BS.ByteString -> Int
-openCloseSum = BS.foldl counter 0
+countOpenBrackets :: BS.ByteString -> Int
+countOpenBrackets = BS.foldl' counter 0
   where
     counter n 123 = n + 1 -- {
     counter n 125 = n - 1 -- }
@@ -44,9 +44,9 @@ sockRequest SocketConfig{..} bs = liftIO $ timeout tout $ do
     tout        = fromMaybe defaultTimeout rpcTimeout
     readAll soc = fmap Lazy.fromChunks (readChunks soc 0)
 
-    readChunks soc bo = unsafeInterleaveIO $ do
+    readChunks soc bracketsOpen = unsafeInterleaveIO $ do
         chunk <- recv soc 4096
-        let newBo = bo + openCloseSum chunk
+        let newBo = bracketsOpen + countOpenBrackets chunk
         if newBo == 0 || BS.null chunk
           then close soc >> return [chunk]
           else fmap (chunk :) (readChunks soc newBo)

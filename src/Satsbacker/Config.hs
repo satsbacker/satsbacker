@@ -16,11 +16,11 @@ import Data.Maybe (fromMaybe, isJust)
 import Data.Text (Text)
 import Database.SQLite.Simple (Connection, execute, query_, Only(..))
 import Foreign.C.Types (CTime(..))
+import Network.Mail.SMTP (Address(..))
 import Network.RPC (rpc)
 import System.Environment (lookupEnv)
 import System.Posix.Time (epochTime)
 import System.Timeout (timeout)
-import Network.Mail.SMTP (Address(..))
 
 import Bitcoin.Network
 import Crypto.Macaroons (Secret(..))
@@ -34,6 +34,8 @@ import Satsbacker.Data.Site (Site(..))
 import Satsbacker.Data.Subscription
 import Satsbacker.Data.Tiers (TierDef(..))
 import Satsbacker.Logging
+import Satsbacker.Templates
+import Text.Mustache (Template)
 
 import qualified Data.HashMap.Lazy as Map
 import qualified Data.List.NonEmpty as NE
@@ -47,6 +49,7 @@ data Config = Config {
     , cfgSite      :: Site
     , cfgSecret    :: Secret
     , cfgEmail     :: Address
+    , cfgTemplates :: Template
     }
 
 cfgNetwork :: Config -> BitcoinNetwork
@@ -84,7 +87,7 @@ instance FromJSON LightningConfig where
 instance ToJSON Config where
     toJSON cfg =
         let
-            Config _ _ _ lncfg site _ (Address _ email) = cfg
+            Config _ _ _ lncfg site _ (Address _ email) _ = cfg
             network = lncfgNetwork lncfg
         in
           object
@@ -203,6 +206,7 @@ getConfig = do
   site <- maybe (fail "could not find site config, corrupt?") return msite
   mvconn <- newMVar conn
   mvnotify <- newEmptyMVar
+  templates <- loadTemplates
   let cfg = Config {
               cfgConn      = mvconn
             , cfgRPC       = socketCfg
@@ -211,6 +215,7 @@ getConfig = do
             , cfgSite      = site
             , cfgSecret    = Secret "secret" -- TODO: macaroon secret
             , cfgEmail     = Address (Just "satsbacker") "noreply@satsbacker.com" -- TODO: macaroon secret
+            , cfgTemplates = templates
             }
   _ <- forkIO (waitInvoices 0 payindex cfg)
   return cfg

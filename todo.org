@@ -6,7 +6,7 @@
 #+FILETAGS: satsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2019-01-05 Sat 00:18]
+#+CAPTION: Clock summary at [2019-01-05 Sat 12:27]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
@@ -14,11 +14,10 @@
 
 * User registration
 
-** TODO Confirmation link unique id
-** TODO EmailData instead of user in email template
-** TODO On confirmation, associate subscriptions
+** TODO Implement email confirm route
 ** TODO Dashboard
-
+** TODO User Picture (gravatar?)
+** TODO On confirmation, associate subscriptions
 
 * Todos
 ** TODO Implement open source goal

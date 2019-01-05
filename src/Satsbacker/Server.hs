@@ -9,6 +9,8 @@ import Control.Applicative (optional)
 import Control.Concurrent (MVar, withMVar)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
+import Unsafe.Coerce (unsafeCoerce)
+import Data.Bool (bool)
 import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Text (Text)
 import Database.SQLite.Simple
@@ -16,7 +18,6 @@ import Network.Wai (Middleware)
 import Network.Wai.Middleware.Static (staticPolicy, addBase)
 import System.Environment (lookupEnv)
 import System.Posix.Env (putEnv)
-import Text.Mustache
 import Text.Read (readMaybe)
 import Web.Scotty
 
@@ -27,17 +28,19 @@ import Satsbacker.Config
 import Satsbacker.Cookies
 import Satsbacker.Data.Checkout
 import Satsbacker.Data.Email
-import Satsbacker.Email
 import Satsbacker.Data.Invoice
 import Satsbacker.Data.InvoiceId (InvId(..))
+import Satsbacker.Data.Merged
 import Satsbacker.Data.Tiers
 import Satsbacker.Data.TiersPage
 import Satsbacker.Data.User
+import Satsbacker.Email
 import Satsbacker.Logging
 import Satsbacker.Macaroons
-import Satsbacker.Templates
+import Satsbacker.Templates.Render
 
 import qualified Data.Text.Lazy as LT
+import qualified Crypto.Macaroons as Macaroon
 
 
 data Page = Dashboard
@@ -51,8 +54,8 @@ redirectTo page =
       redirect r
 
 
-getSignup :: Config -> Template -> ActionM ()
-getSignup cfg@Config{..} templ = simplePage cfg templ
+getSignup :: Config -> ActionM ()
+getSignup cfg = simplePage cfg "signup"
 
 
 registerUser :: MVar Connection -> Username -> Email -> Plaintext -> IO (UserId, User)
@@ -65,8 +68,8 @@ registerUser mvconn name email pass = do
   return (userId, user)
 
 
-postSignup :: Config -> Template -> ActionM ()
-postSignup cfg@Config{..} templ = do
+postSignup :: Config -> ActionM ()
+postSignup cfg@Config{..} = do
   name  <- fmap Username (param "name")
   email <- fmap Email (param "email")
   pass  <- fmap Plaintext (param "password")
@@ -78,7 +81,8 @@ postSignup cfg@Config{..} templ = do
     Just (Only (_id :: Int)) ->
       signupError "A user with that username or email already exists"
     Nothing -> do (userId, user) <- liftIO (registerUser cfgConn name email pass)
-                  liftIO (signupEmail cfg user email templ)
+                  emailMac <- liftIO (mintEmailMacaroon cfgSecret email userId)
+                  liftIO (signupEmail cfg user emailMac email)
                   m <- liftIO (sessionMacaroon cfgSecret userId)
                   setCookie (authCookie m)
                   redirectTo Dashboard
@@ -86,16 +90,16 @@ postSignup cfg@Config{..} templ = do
     signupError :: Text -> ActionM ()
     signupError msg = do
       let validation = object [ "error" .= msg ]
-      renderTemplateM cfg templ (merged "validation" validation cfg)
+      renderTemplateM cfg "signup" (merged "validation" validation cfg)
 
 
-lookupUserPage :: Config -> Template -> ActionM ()
-lookupUserPage cfg@Config{..} templ = do
+lookupUserPage :: Config -> ActionM ()
+lookupUserPage cfg@Config{..} = do
   (userId, user) <- withUser cfgConn
   mstats <- liftIO $ withMVar cfgConn $ \conn -> getUserStats conn userId
   let stats = fromMaybe (UserStats 0 0) mstats
       userPage = UserPage user stats
-  renderTemplateM cfg templ userPage
+  renderTemplateM cfg "user" userPage
 
 
 withUser :: MVar Connection -> ActionM (UserId, User)
@@ -107,12 +111,12 @@ withUser mvconn = do
     Just user -> return user
 
 
-tiersPage :: Config -> Template -> ActionM ()
-tiersPage cfg@Config{..} templ = do
+tiersPage :: Config -> ActionM ()
+tiersPage cfg@Config{..} = do
   (userId, user) <- withUser cfgConn
   tiers <- liftIO $ withMVar cfgConn $ \conn -> getTiers conn userId
   let tpage = mkTiersPage user 2 tiers
-  renderTemplateM cfg templ tpage
+  renderTemplateM cfg "back" tpage
 
 
 checkoutErrorPage :: CheckoutError -> ActionM ()
@@ -143,8 +147,8 @@ postCheckout cfg@Config{..} = do
                     redirect (LT.fromStrict coUri)
 
 
-getCheckout :: Config -> Template -> ActionM ()
-getCheckout cfg@Config{..} templ = do
+getCheckout :: Config -> ActionM ()
+getCheckout cfg@Config{..} = do
   invId   <- param "invoice_id"
   minvRef <- liftIO $ withMVar cfgConn $ \conn ->
                fetchOne conn (search "invoice_id" (invId :: Text))
@@ -153,28 +157,65 @@ getCheckout cfg@Config{..} templ = do
   case echeckoutPage of
     Left err -> do liftIO $ logError (show err)
                    checkoutErrorPage err
-    Right checkoutPage -> renderTemplateM cfg templ checkoutPage
+    Right checkoutPage -> renderTemplateM cfg "checkout" checkoutPage
 
 
-simplePage :: Config -> Template -> ActionM ()
-simplePage cfg t = renderTemplateM cfg t ()
+simplePage :: Config -> Text -> ActionM ()
+simplePage cfg t = simplePage_ cfg t ()
+
+simplePage_ :: ToJSON a => Config -> Text -> a  -> ActionM ()
+simplePage_ cfg@Config{..} t = renderTemplateM cfg t
 
 
-routes :: Config -> Template -> ScottyM ()
-routes cfg@Config{..} templates = do
-  get  "/"                     (simplePage cfg (t "home"))
-  get  "/dashboard"            (simplePage cfg (t "dashboard"))
-  get  "/signup"               (getSignup cfg signupTemplate)
-  post "/signup"               (postSignup cfg signupTemplate)
-  get  "/:user"                (lookupUserPage cfg (t "user"))
-  get  "/back/:user"           (tiersPage cfg (t "back"))
-  post "/checkout/:tier_id"    (postCheckout cfg)
-  get  "/checkout/:invoice_id" (getCheckout cfg (t "checkout"))
+singleQuery :: Functor f => f [Only b] -> f (Maybe b)
+singleQuery = fmap (fmap fromOnly . listToMaybe)
+
+
+errorPage :: forall a. Config -> Text -> ActionM a
+errorPage cfg@Config{..} err =
+    fmap unsafeCoerce (simplePage_ cfg "error" err)
+
+
+confirmEmail :: Config -> ActionM ()
+confirmEmail cfg@Config{..} = do
+  macaroonStr <- param "macaroon"
+
+  let mmacaroon = Macaroon.deserialize macaroonStr
+      muid      = either (const Nothing) macaroonUserId mmacaroon
+
+  macaroon <- either (const (errPage "invalid macaroon")) return mmacaroon
+  userId   <- maybe (errPage "missing userId in macaroon") return muid
+
+  let mvalid = Macaroon.isValidSig cfgSecret macaroon
+      uid    = getUserId userId
+
+  bool (fail "invalid macaroon signature") (return ()) mvalid
+  memail <- singleQuery $ liftIO $ withMVar cfgConn $ \conn ->
+    query conn "select email from users where id = ? limit 1" (Only uid)
+
+  email <- maybe (errPage "could not find") return memail
+  ok <- liftIO (verifyEmailMacaroon cfgSecret (Email email) userId macaroon)
+  bool invalidToken (redirectTo Dashboard) ok
+  where
+    errPage :: forall a. Text -> ActionM a
+    errPage = errorPage cfg
+
+    invalidToken = errPage "Invalid or expired email confirmation"
+
+
+routes :: Config -> ScottyM ()
+routes cfg@Config{..} = do
+  get  "/"                        (simplePage cfg "home")
+  get  "/dashboard"               (simplePage cfg "dashboard")
+  get  "/confirm-email/:macaroon" (confirmEmail cfg)
+  get  "/signup"                  (getSignup cfg)
+  post "/signup"                  (postSignup cfg)
+  get  "/:user"                   (lookupUserPage cfg)
+  get  "/back/:user"              (tiersPage cfg)
+  post "/checkout/:tier_id"       (postCheckout cfg)
+  get  "/checkout/:invoice_id"    (getCheckout cfg)
   invoiceRoutes cfg
   middleware (static "public")
-  where
-    signupTemplate = t "signup"
-    t = getTemplate templates
 
 
 static :: String -> Network.Wai.Middleware
@@ -196,10 +237,8 @@ testServer = do
 
 startServer :: Config -> IO ()
 startServer cfg = do
-  port      <- getPort
-  templates <- loadTemplates
-  -- TODO loaded template stats (# loaded, etc)
-  scotty port (routes cfg templates)
+  port <- getPort
+  scotty port (routes cfg)
 
 
 getPort :: IO Int

@@ -4,6 +4,7 @@ module Crypto.Macaroons.Verifiers
     ( compareVerifier
     , unixTimeVerifier
     , equalVerifier
+    , equalParser
     ) where
 
 import Data.ByteString (ByteString)
@@ -47,19 +48,22 @@ ordParser key = opParser key orderingParser
 eqParser :: ByteString -> Parser b -> Parser b
 eqParser key val = fmap fst (opParser key (char '=') val)
 
+firstPartyV :: Applicative f
+            => Caveat -> (CId -> f VerificationResult) -> f VerificationResult
+firstPartyV c = firstParty c (pure Unrelated)
 
-firstParty :: Applicative f
-           => Caveat -> (CId -> f VerificationResult) -> f VerificationResult
-firstParty c fn =
+
+firstParty :: Caveat -> p -> (CId -> p) -> p
+firstParty c g f =
     case c of
-      ThirdParty{}    -> pure Unrelated
-      FirstParty cid_ -> fn cid_
+      ThirdParty{}    -> g
+      FirstParty cid_ -> f cid_
 
 
 compareVerifier :: (Applicative f, Ord a)
                 => ByteString -> f a -> Parser a -> Caveat -> f VerificationResult
 compareVerifier key lval valParser c  =
-  firstParty c $ \(CId cid_) ->
+  firstPartyV c $ \(CId cid_) ->
     case parseOnly (ordParser key valParser) cid_ of
       Left _err -> pure Unrelated
       Right (rval, ord) -> fmap toVerified $
@@ -69,11 +73,24 @@ compareVerifier key lval valParser c  =
           EQ -> lval <&> (== rval)
 
 
+equalParser
+  :: ByteString
+     -> Parser a
+     -> Caveat
+     -> Either String a
+equalParser key valParser c =
+  firstParty c (Left "no parse") $ \(CId cid_) ->
+    parseOnly (eqParser key valParser) cid_
+
+
 equalVerifier :: (Applicative f, Eq a)
-              => ByteString -> f a -> Parser a -> Caveat -> f VerificationResult
+              => ByteString
+              -> f a
+              -> Parser a
+              -> Caveat
+              -> f VerificationResult
 equalVerifier key lval valParser c =
-  firstParty c $ \(CId cid_) ->
-    case parseOnly (eqParser key valParser) cid_ of
+  case equalParser key valParser c of
       Left _err  -> pure Unrelated
       Right rval -> lval <&> toVerified . (==rval)
 
