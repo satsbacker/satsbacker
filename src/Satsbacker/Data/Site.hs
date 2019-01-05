@@ -1,42 +1,57 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Satsbacker.Data.Site
     ( Site(..)
+    , HostName(..)
+    , Protocol(..)
     ) where
 
 import Data.Text (Text)
 import Data.Aeson
 import Database.SQLite.Simple
+import Database.SQLite.Simple.ToField
+import Database.SQLite.Simple.FromField
 
 import Database.SQLite.Table (Table(..))
 
+newtype Protocol = Protocol { getProtocol :: Text }
+
+newtype HostName = HostName { getHost :: Text }
+    deriving (ToJSON, ToField, FromField)
 
 data Site = Site {
-      siteName :: Text
+      siteName     :: Text
+    , siteHostName :: HostName
+    , siteProtocol :: Protocol
     }
 
 siteFields :: [Text]
-siteFields = ["name"]
+siteFields = ["name", "hostname"]
 
 instance ToJSON Site where
     toJSON site =
         let
-            Site name = site
+            Site name hostname _ = site
         in
-          object [ "name" .= name ]
+          object [ "name"     .= name
+                 , "hostname" .= hostname
+                 ]
 
 
 instance ToRow Site where
     toRow site =
         let
-            Site f1 = site
+            Site f1 f2 _f = site
         in
-            toRow (Only f1)
+            toRow (f1, f2)
 
 
 instance FromRow Site where
     fromRow =
         Site <$> field
+             <*> field
+             <*> pure (Protocol "https")
 
 instance Table Site where
     tableName _   = "site"

@@ -67,7 +67,10 @@ migrations = [
      "CREATE TABLE site (id INTERGER PRIMARY KEY,\
      \ name TEXT NOT NULL)", -- 8
 
-     "INSERT INTO site (name) VALUES ('satsbacker')" -- 9
+     "INSERT INTO site (name) VALUES ('satsbacker')", -- 9
+
+     "ALTER TABLE site ADD hostname TEXT", -- 10
+     "UPDATE site set (hostname) = ('localhost')" -- 11
   ]
 
 hasVersionTable :: Connection -> IO Bool

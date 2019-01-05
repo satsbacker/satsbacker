@@ -3,28 +3,26 @@
 
 module Satsbacker.Email where
 
-import Satsbacker.Config (Config(..))
-import Satsbacker.Data.Email (Email(..))
-import Network.Mail.SMTP
 import Data.Aeson
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8)
+import Network.Mail.SMTP
+import Satsbacker.Config (Config(..))
+import Satsbacker.Data.Email (Email(..))
 
 import Satsbacker.Templates.Render (renderTemplate)
-import Satsbacker.Data.Site (Site(..))
+import Satsbacker.Data.Site
 import Satsbacker.Data.User (User)
 
 import Crypto.Macaroons
 import qualified Crypto.Macaroons as Macaroon
 
-
-confirmLink :: Site -> Macaroon -> Text
-confirmLink Site{..} macaroon =
+confirmLink :: Protocol -> HostName -> Macaroon -> Text
+confirmLink (Protocol proto) (HostName host) macaroon =
     let
         bakedMacaroon = decodeUtf8 (Macaroon.serialize macaroon)
     in
-        "https://" <> siteName <> "/confirm-email/" <> bakedMacaroon
-
+        proto <> "://" <> host <> "/confirm-email/" <> bakedMacaroon
 
 signupEmail :: Config -> User -> Macaroon -> Email -> IO ()
 signupEmail cfg@Config{..} user macaroon (Email toAddress) =
@@ -36,9 +34,14 @@ signupEmail cfg@Config{..} user macaroon (Email toAddress) =
     to      = [ Address Nothing toAddress ]
     subject = "Confirm your email address"
 
-    clink = confirmLink cfgSite macaroon
+    hostname = siteHostName cfgSite
+    clink = confirmLink proto hostname macaroon
 
-    dat = object [ "user" .= user, "confirmation-link" .= clink ]
+    proto = siteProtocol cfgSite
+
+    dat = object [ "user" .= user
+                 , "confirmation-link" .= clink
+                 ]
 
     body = plainTextPart (renderTemplate cfg "confirm-email-txt" dat)
     html = htmlPart (renderTemplate cfg "confirm-email" dat)

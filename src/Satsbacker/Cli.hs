@@ -4,7 +4,8 @@
 
 module Satsbacker.Cli where
 
-import Database.SQLite.Simple (Connection)
+import Database.SQLite.Simple
+import Database.SQLite.Simple.ToField
 import Control.Concurrent.MVar (MVar, withMVar)
 import System.Exit (exitFailure)
 import Data.Text (Text)
@@ -46,6 +47,17 @@ createUserCmd mvconn args = do
                            )
     _ -> createUserUsage
 
+set :: ToField v => Connection -> Text -> v -> IO ()
+set conn key v = execute conn q (Only v)
+  where
+    q = Query ("update site set (" <> key <> ") = ?")
+
+setSiteConfig :: MVar Connection -> Text -> Text -> IO ()
+setSiteConfig mvconn key val = do
+  case key of
+    "hostname" -> withMVar mvconn $ \conn -> set conn "hostname" val
+    _          -> putStrLn ("unknown config key " ++ T.unpack key)
+  where
 
 processArgs :: Config -> Text -> [Text] -> IO ()
 processArgs cfg@Config{..} arg rest =
@@ -55,6 +67,9 @@ processArgs cfg@Config{..} arg rest =
 
       ("server", _) ->
           startServer cfg
+
+      ("set", [key, val]) ->
+          setSiteConfig cfgConn key val
 
       ("test-data", _) ->
           testData
@@ -72,6 +87,7 @@ usage = do
   putStrLn "  create-user"
   putStrLn "  server"
   putStrLn "  test-data"
+  putStrLn "  set hostname satsbacker.com"
   putStrLn ""
   exitFailure
 
@@ -89,6 +105,7 @@ testData = do
   withMVar cfgConn $ \conn -> do
     userId <- insert conn user
     let tiers = testTierData (UserId userId)
+    execute_ conn "update site set (hostname) = ('satsbacker.com') where id = 1"
     mapM_ (insert conn) tiers
   return ()
 

@@ -21,6 +21,7 @@ import Network.RPC (rpc)
 import System.Environment (lookupEnv)
 import System.Posix.Time (epochTime)
 import System.Timeout (timeout)
+import Text.Read (readMaybe)
 
 import Bitcoin.Network
 import Crypto.Macaroons (Secret(..))
@@ -30,7 +31,7 @@ import Network.RPC.Config (SocketConfig(..))
 import Satsbacker.DB
 import Satsbacker.Data.Invoice
 import Satsbacker.Data.InvoiceId
-import Satsbacker.Data.Site (Site(..))
+import Satsbacker.Data.Site (Site(..), HostName(..), Protocol(..))
 import Satsbacker.Data.Subscription
 import Satsbacker.Data.Tiers (TierDef(..))
 import Satsbacker.Logging
@@ -193,21 +194,45 @@ getNetwork val = do
         Nothing           -> err
     key _ _ = err
 
+getIsProd :: IO Bool
+getIsProd = isJust <$> lookupEnv "PRODUCTION"
+
+
+getPort :: IO Int
+getPort = do
+  mstrport <- lookupEnv "PORT"
+  return (fromMaybe 8002 (mstrport >>= readMaybe))
+
+showSiteConfig :: Site -> Text
+showSiteConfig Site{..} =
+  getProtocol siteProtocol <> "://" <> getHost siteHostName
+
+
 getConfig :: IO Config
 getConfig = do
+  port <- getPort
   socketCfg <- getSocketConfig
+  isProd <- getIsProd
   lncfg <- getLightningConfig socketCfg
   logError $ "[ln] detected Bitcoin " ++ show (lncfgNetwork lncfg)
                  ++ " from clightning"
   conn <- openDb (lncfgNetwork lncfg)
   migrate conn
-  payindex <- getPayIndex conn
-  msite <- fetchOne conn searchAny
-  site <- maybe (fail "could not find site config, corrupt?") return msite
-  mvconn <- newMVar conn
-  mvnotify <- newEmptyMVar
+  payindex  <- getPayIndex conn
+  msite     <- fetchOne conn searchAny
+  site_     <- maybe (fail "could not find site config, corrupt?") return msite
+  mvconn    <- newMVar conn
+  mvnotify  <- newEmptyMVar
   templates <- loadTemplates
-  let cfg = Config {
+  let debugHostname = HostName ("localhost:" <> T.pack (show port))
+      resolvedHost = if isProd
+                      then siteHostName site_
+                      else debugHostname
+      site' = site_ { siteHostName = resolvedHost } 
+      site = if isProd
+               then site'
+               else site' { siteProtocol = Protocol "http" }
+      cfg = Config {
               cfgConn      = mvconn
             , cfgRPC       = socketCfg
             , cfgPayNotify = mvnotify
@@ -217,6 +242,7 @@ getConfig = do
             , cfgEmail     = Address (Just "satsbacker") "noreply@satsbacker.com" -- TODO: macaroon secret
             , cfgTemplates = templates
             }
+  logError ("[site] using hostname " ++ T.unpack (showSiteConfig site))
   _ <- forkIO (waitInvoices 0 payindex cfg)
   return cfg
 

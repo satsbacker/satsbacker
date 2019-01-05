@@ -16,9 +16,7 @@ import Data.Text (Text)
 import Database.SQLite.Simple
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Static (staticPolicy, addBase)
-import System.Environment (lookupEnv)
 import System.Posix.Env (putEnv)
-import Text.Read (readMaybe)
 import Web.Scotty
 
 import Invoicing
@@ -239,9 +237,3 @@ startServer :: Config -> IO ()
 startServer cfg = do
   port <- getPort
   scotty port (routes cfg)
-
-
-getPort :: IO Int
-getPort = do
-  mstrport <- lookupEnv "PORT"
-  return (fromMaybe 8002 (mstrport >>= readMaybe))
