@@ -5,24 +5,28 @@
 
 module Satsbacker.Config where
 
-import Control.Concurrent.MVar
 import Control.Concurrent (forkIO)
+import Control.Concurrent.MVar
 import Control.Exception (SomeException, try)
-import Data.Functor (void)
-import Data.Text (Text)
-import Data.Maybe (fromMaybe, isJust)
-import Database.SQLite.Simple (Connection, execute, query_, Only(..))
-import Network.RPC (rpc)
-import System.Environment (lookupEnv)
-import System.Timeout (timeout)
 import Data.Aeson
 import Data.Aeson.Types
-import Foreign.C.Types (CTime(..))
+import Data.Functor (void)
 import Data.List.NonEmpty (NonEmpty)
+import Data.Maybe (fromMaybe, isJust)
+import Data.Text (Text)
+import Database.SQLite.Simple (Connection, execute, query_, Only(..))
+import Foreign.C.Types (CTime(..))
+import Network.RPC (rpc)
+import System.Environment (lookupEnv)
 import System.Posix.Time (epochTime)
+import System.Timeout (timeout)
+import Network.Mail.SMTP (Address(..))
 
 import Bitcoin.Network
+import Crypto.Macaroons (Secret(..))
 import Database.SQLite.Table
+import Network.RPC
+import Network.RPC.Config (SocketConfig(..))
 import Satsbacker.DB
 import Satsbacker.Data.Invoice
 import Satsbacker.Data.InvoiceId
@@ -30,11 +34,6 @@ import Satsbacker.Data.Site (Site(..))
 import Satsbacker.Data.Subscription
 import Satsbacker.Data.Tiers (TierDef(..))
 import Satsbacker.Logging
-import Crypto.Macaroons (Secret(..))
-
-import Network.RPC
-
-import Network.RPC.Config (SocketConfig(..))
 
 import qualified Data.HashMap.Lazy as Map
 import qualified Data.List.NonEmpty as NE
@@ -47,6 +46,7 @@ data Config = Config {
     , cfgLnConfig  :: LightningConfig
     , cfgSite      :: Site
     , cfgSecret    :: Secret
+    , cfgEmail     :: Address
     }
 
 cfgNetwork :: Config -> BitcoinNetwork
@@ -79,10 +79,12 @@ instance FromJSON LightningConfig where
                         <*> obj .: "address"
     parseJSON _ = fail "could not parse clightning getinfo config"
 
+
+
 instance ToJSON Config where
     toJSON cfg =
         let
-            Config _ _ _ lncfg site _ = cfg
+            Config _ _ _ lncfg site _ (Address _ email) = cfg
             network = lncfgNetwork lncfg
         in
           object
@@ -90,6 +92,7 @@ instance ToJSON Config where
             , "is_testnet" .= (network == Testnet)
             , "peer"       .= showLnPeer lncfg
             , "site"       .= site
+            , "email"      .= email
             ]
 
 
@@ -201,12 +204,13 @@ getConfig = do
   mvconn <- newMVar conn
   mvnotify <- newEmptyMVar
   let cfg = Config {
-              cfgConn       = mvconn
-            , cfgRPC        = socketCfg
-            , cfgPayNotify  = mvnotify
-            , cfgLnConfig   = lncfg
-            , cfgSite       = site
-            , cfgSecret     = Secret "secret" -- TODO: macaroon secret
+              cfgConn      = mvconn
+            , cfgRPC       = socketCfg
+            , cfgPayNotify = mvnotify
+            , cfgLnConfig  = lncfg
+            , cfgSite      = site
+            , cfgSecret    = Secret "secret" -- TODO: macaroon secret
+            , cfgEmail     = Address (Just "satsbacker") "noreply@satsbacker.com" -- TODO: macaroon secret
             }
   _ <- forkIO (waitInvoices 0 payindex cfg)
   return cfg

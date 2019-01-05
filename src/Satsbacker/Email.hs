@@ -1,24 +1,32 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Satsbacker.Email where
 
+import Satsbacker.Config (Config(..))
+import Satsbacker.Data.Email (Email(..))
 import Network.Mail.SMTP
+import Data.Aeson (ToJSON)
+import Text.Mustache (Template)
+
+import Satsbacker.Templates (getTemplate, renderTemplate)
 
 
-from    = Address (Just "satsbacker test") "test@satsbacker.com"
-to      = [Address (Just "William Casarin") "jb55@jb55.com"]
-cc      = []
-bcc     = []
-subject = "satsbacker email test"
-body    = plainTextPart "hello from satsbacker"
-html    = htmlPart "<h1>Hello there</h1><p>Hello from satsbacker</p>"
-host    = "satsbacker.com"
-
-mail = simpleMail from to cc bcc subject [body, html]
-
-main = renderSendMail mail
-
-
-
-signupEmail = simpleMail from to cc bcc subject [body, html]
+signupEmail :: ToJSON a
+            => Config -> a -> Email -> Template -> IO ()
+signupEmail cfg@Config{..} user (Email toAddress) templates =
+  renderSendMail mail
   where
-    to = 
+    mail    = simpleMail cfgEmail to cc bcc subject [body, html]
+    cc      = []
+    bcc     = []
+    to      = [ Address Nothing toAddress ]
+    subject = "Confirm your email address"
+
+    bodyTemplate = getTemplate templates "confirm-email-txt"
+    htmlTemplate = getTemplate templates "confirm-email"
+
+    body = plainTextPart (renderTemplate cfg bodyTemplate user)
+    html = htmlPart (renderTemplate cfg htmlTemplate user)
+
+

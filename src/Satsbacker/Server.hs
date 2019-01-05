@@ -9,7 +9,6 @@ import Control.Applicative (optional)
 import Control.Concurrent (MVar, withMVar)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
-import Data.ByteString.Builder (toLazyByteString)
 import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Text (Text)
 import Database.SQLite.Simple
@@ -23,11 +22,12 @@ import Web.Scotty
 
 import Invoicing
 
-import Crypto.Macaroons
 import Database.SQLite.Table
 import Satsbacker.Config
+import Satsbacker.Cookies
 import Satsbacker.Data.Checkout
 import Satsbacker.Data.Email
+import Satsbacker.Email
 import Satsbacker.Data.Invoice
 import Satsbacker.Data.InvoiceId (InvId(..))
 import Satsbacker.Data.Tiers
@@ -36,12 +36,8 @@ import Satsbacker.Data.User
 import Satsbacker.Logging
 import Satsbacker.Macaroons
 import Satsbacker.Templates
-import Web.Cookie
 
-import qualified Crypto.Macaroons as Macaroon
-import qualified Data.HashMap.Lazy as Map
 import qualified Data.Text.Lazy as LT
-import qualified Data.Text.Lazy.Encoding as TL
 
 
 data Page = Dashboard
@@ -54,21 +50,19 @@ redirectTo page =
     in
       redirect r
 
+
 getSignup :: Config -> Template -> ActionM ()
 getSignup cfg@Config{..} templ = simplePage cfg templ
 
-authCookie :: Macaroon -> SetCookie
-authCookie macaroon =
-  defaultSetCookie {
-    setCookieName  = "session"
-  , setCookieValue = Macaroon.serialize macaroon
-  }
 
-
-
-setCookie :: SetCookie -> ActionM ()
-setCookie c =
-  addHeader "Set-Cookie" (TL.decodeUtf8 . toLazyByteString $ renderSetCookie c)
+registerUser :: MVar Connection -> Username -> Email -> Plaintext -> IO (UserId, User)
+registerUser mvconn name email pass = do
+  u <- createUser pass
+  let user = u { userName = name
+               , userEmail = email
+               }
+  userId <- UserId <$> withMVar mvconn (\conn -> insert conn user)
+  return (userId, user)
 
 
 postSignup :: Config -> Template -> ActionM ()
@@ -83,24 +77,16 @@ postSignup cfg@Config{..} templ = do
   case muser of
     Just (Only (_id :: Int)) ->
       signupError "A user with that username or email already exists"
-    Nothing -> do u <- liftIO (createUser pass)
-                  let user = u { userName = name
-                               , userEmail = email
-                               }
-                  userId <- liftIO $ withMVar cfgConn $ \conn -> insert conn user
-                  m <- liftIO (sessionMacaroon cfgSecret (UserId userId))
+    Nothing -> do (userId, user) <- liftIO (registerUser cfgConn name email pass)
+                  liftIO (signupEmail cfg user email templ)
+                  m <- liftIO (sessionMacaroon cfgSecret userId)
                   setCookie (authCookie m)
                   redirectTo Dashboard
   where
     signupError :: Text -> ActionM ()
     signupError msg = do
       let validation = object [ "error" .= msg ]
-      renderTemplate cfg templ (merged "validation" validation cfg)
-
-
-getTemplate :: Template -> PName -> Template
-getTemplate templates pname =
-    templates { templateActual = pname }
+      renderTemplateM cfg templ (merged "validation" validation cfg)
 
 
 lookupUserPage :: Config -> Template -> ActionM ()
@@ -109,7 +95,7 @@ lookupUserPage cfg@Config{..} templ = do
   mstats <- liftIO $ withMVar cfgConn $ \conn -> getUserStats conn userId
   let stats = fromMaybe (UserStats 0 0) mstats
       userPage = UserPage user stats
-  renderTemplate cfg templ userPage
+  renderTemplateM cfg templ userPage
 
 
 withUser :: MVar Connection -> ActionM (UserId, User)
@@ -126,32 +112,15 @@ tiersPage cfg@Config{..} templ = do
   (userId, user) <- withUser cfgConn
   tiers <- liftIO $ withMVar cfgConn $ \conn -> getTiers conn userId
   let tpage = mkTiersPage user 2 tiers
-  renderTemplate cfg templ tpage
+  renderTemplateM cfg templ tpage
 
 
 checkoutErrorPage :: CheckoutError -> ActionM ()
 checkoutErrorPage = raise . describeCheckoutError
 
-newtype Merged a into = Merged { getMergedConfig :: ((Text, a), into) }
-
-instance (ToJSON a, ToJSON into) => ToJSON (Merged a into) where
-    toJSON (Merged ((key, obj), intoVal)) =
-        let
-            cfgObj v intoV = Object (Map.insert key v intoV)
-        in
-        case (toJSON intoVal, toJSON obj) of
-          (Object intoV, valJson) -> cfgObj valJson intoV
-          (_, valJson)            -> cfgObj valJson mempty -- don't merge if we see a non-object
 
 merged :: Text -> a -> into -> Merged a into
 merged key v into = Merged ((key, v), into)
-
-renderTemplate :: ToJSON a => Config -> Template -> a -> ActionM ()
-renderTemplate cfg templ val =
-    let templateData = Merged (("config", cfg), val)
-        templateJson = toJSON templateData
-        (_w, rendered) = renderMustacheW templ templateJson
-    in html rendered
 
 
 postCheckout :: Config -> ActionM ()
@@ -184,16 +153,17 @@ getCheckout cfg@Config{..} templ = do
   case echeckoutPage of
     Left err -> do liftIO $ logError (show err)
                    checkoutErrorPage err
-    Right checkoutPage -> renderTemplate cfg templ checkoutPage
+    Right checkoutPage -> renderTemplateM cfg templ checkoutPage
 
 
 simplePage :: Config -> Template -> ActionM ()
-simplePage cfg t = renderTemplate cfg t ()
+simplePage cfg t = renderTemplateM cfg t ()
 
 
 routes :: Config -> Template -> ScottyM ()
 routes cfg@Config{..} templates = do
   get  "/"                     (simplePage cfg (t "home"))
+  get  "/dashboard"            (simplePage cfg (t "dashboard"))
   get  "/signup"               (getSignup cfg signupTemplate)
   post "/signup"               (postSignup cfg signupTemplate)
   get  "/:user"                (lookupUserPage cfg (t "user"))

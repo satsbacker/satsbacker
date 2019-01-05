@@ -1,0 +1,9 @@
+
+Hello {{username}},
+
+Please confirm your email by clicking on this link:
+       
+{{confirmation-link}}
+
+Thanks!
+{{config.site.name}}

@@ -12,7 +12,7 @@ import Database.SQLite.Table (Table(..))
 
 
 data Site = Site {
-      siteCfgName :: Text
+      siteName :: Text
     }
 
 siteFields :: [Text]
