@@ -70,7 +70,8 @@ migrations = [
      "INSERT INTO site (name) VALUES ('satsbacker')", -- 9
 
      "ALTER TABLE site ADD hostname TEXT", -- 10
-     "UPDATE site set (hostname) = ('localhost')" -- 11
+     "UPDATE site set (hostname) = ('localhost')", -- 11
+     "ALTER TABLE subscriptions ADD invoice_id TEXT" -- 12
   ]
 
 hasVersionTable :: Connection -> IO Bool

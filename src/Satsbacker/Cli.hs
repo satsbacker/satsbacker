@@ -105,7 +105,7 @@ testData = do
   withMVar cfgConn $ \conn -> do
     userId <- insert conn user
     let tiers = testTierData (UserId userId)
-    execute_ conn "update site set (hostname) = ('satsbacker.com') where id = 1"
+    execute_ conn "update site set (hostname) = ('satsbacker.com')"
     mapM_ (insert conn) tiers
   return ()
 

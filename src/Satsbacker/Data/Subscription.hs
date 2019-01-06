@@ -9,6 +9,7 @@ import Data.Text (Text)
 
 import Satsbacker.Data.Tiers (TierId(..))
 import Satsbacker.Data.User (UserId(..))
+import Satsbacker.Data.InvoiceId (InvId(..))
 import Satsbacker.Data.Email (Email)
 import Database.SQLite.Table (Table(..))
 
@@ -26,6 +27,7 @@ subscriptionFields =
     , "user_cookie"
     , "valid_until"
     , "tier_id"
+    , "invoice_id"
     ]
 
 data Subscription = Subscription
@@ -35,13 +37,14 @@ data Subscription = Subscription
   , subPayerCookie :: Maybe Text
   , subValidUntil  :: Int
   , subTierId      :: TierId
+  , subInvoiceId   :: InvId
   }
 
 
 instance ToRow Subscription where
     toRow sub =
         let
-            Subscription f1 f2 f3 f4 f5 f6 = sub
+            Subscription f1 f2 f3 f4 f5 f6 f7 = sub
         in
           toRow ( getUserId f1
                 , fmap getUserId f2
@@ -49,4 +52,5 @@ instance ToRow Subscription where
                 , f4
                 , f5
                 , f6
+                , getInvId f7
                 )

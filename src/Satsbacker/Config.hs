@@ -145,6 +145,7 @@ persistSubFromInvId mvconn (InvId invId) = do
                 , subValidUntil  = fromIntegral timestamp + 2678400
                     -- NOTE: always 31 days
                 , subTierId      = invRefTierId
+                , subInvoiceId   = invRefInvoiceId
                 }
 
       _ <- withMVar mvconn $ \conn -> insert conn sub

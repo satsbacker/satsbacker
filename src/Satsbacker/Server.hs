@@ -173,6 +173,16 @@ errorPage :: forall a. Config -> Text -> ActionM a
 errorPage cfg@Config{..} err =
     fmap unsafeCoerce (simplePage_ cfg "error" err)
 
+setEmailConfirmed :: Connection -> UserId -> IO ()
+setEmailConfirmed conn (UserId userId) = do
+  execute conn "update users set (email_confirmed) = 1 where id = ?"
+          (Only userId)
+                  
+assocSubscriptions :: Connection -> Email -> UserId -> IO ()
+assocSubscriptions conn (Email email) (UserId userId) =
+  execute conn "update subscriptions set (user_id) = (?) where user_email = ?"
+          (userId, email)
+
 
 confirmEmail :: Config -> ActionM ()
 confirmEmail cfg@Config{..} = do
@@ -192,13 +202,20 @@ confirmEmail cfg@Config{..} = do
     query conn "select email from users where id = ? limit 1" (Only uid)
 
   email <- maybe (errPage "could not find") return memail
-  ok <- liftIO (verifyEmailMacaroon cfgSecret (Email email) userId macaroon)
-  bool invalidToken (redirectTo Dashboard) ok
+  let email_ = Email email
+  ok <- liftIO (verifyEmailMacaroon cfgSecret email_ userId macaroon)
+  bool invalidToken (finalize email_ userId) ok
   where
+    finalize email userId = do
+      liftIO $ withMVar cfgConn $ \conn -> setEmailConfirmed conn userId
+      liftIO $ withMVar cfgConn $ \conn -> assocSubscriptions conn email userId
+      redirectTo Dashboard
+
     errPage :: forall a. Text -> ActionM a
     errPage = errorPage cfg
 
     invalidToken = errPage "Invalid or expired email confirmation"
+
 
 
 routes :: Config -> ScottyM ()
