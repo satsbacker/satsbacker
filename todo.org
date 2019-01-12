@@ -6,21 +6,31 @@
 #+FILETAGS: satsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2019-01-05 Sat 16:20]
+#+CAPTION: Clock summary at [2019-01-07 Mon 15:07]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
 #+END:
 
 * Todos
+
+** TODO Secure,HttpOnly cookie in production
+** TODO Stacked subscriptions
+
+If you subscribe multiple times, the system should know how much you should
+spend to maintain various subscription levels
+
+Since there can be many ways to donate, a "subscription tier" should be
+abstracted to how many bits
+
 ** TODO Dashboard
+** TODO Configurable denomination
 ** TODO User Picture (gravatar?)
 ** TODO Implement open source goal
 ** TODO Goals - bits per month [0/1]
 
 - [ ] Goals only activate after N sustained months
 
-** TODO Configurable denomination
 ** TODO Stripe support
 ** TODO Streak tracking
 ** TODO Re-subscribe email
@@ -42,8 +52,7 @@ Should have streaks implemented before this
 ** TODO Streak highscore board
 ** TODO Leads
 If you become a backer, you immediately get access to N backer-only posts
-** TODO Tiers
-Pledge 100 bits more more per month, etc
-
+** TODO Discord integration
+** TODO Configurable HttpOnly
 
 ** TODO Lightning button next to payment request with link
