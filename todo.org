@@ -6,7 +6,7 @@
 #+FILETAGS: satsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2019-01-12 Sat 11:51]
+#+CAPTION: Clock summary at [2019-01-12 Sat 12:24]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
@@ -14,7 +14,11 @@
 
 * Todos
 
+** TODO set denomination from cli
+
 ** TODO Re-subscribe email
+
+** TODO Configurable HttpOnly
 
 ** TODO Secure,HttpOnly cookie in production
 ** TODO Stacked subscriptions
@@ -27,8 +31,6 @@ abstracted to how many bits
 
 ** TODO Update RPC to use new end-of-command marker (\n\n)
 ** TODO Dashboard
-** DONE Configurable denomination
-CLOSED: [2019-01-12 Sat 11:47]
 ** TODO User Picture (gravatar?)
 ** TODO Implement open source goal
 ** TODO Stripe support
@@ -51,6 +53,5 @@ CLOSED: [2019-01-12 Sat 11:47]
 ** TODO Leads
 If you become a backer, you immediately get access to N backer-only posts
 ** TODO Discord integration
-** TODO Configurable HttpOnly
 
 ** TODO Lightning button next to payment request with link
