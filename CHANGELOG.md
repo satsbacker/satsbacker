@@ -1,6 +1,6 @@
 # Revision history for satsbacker
 
-## 0.1.1
+## 0.1.2
 
 * Configure denomination from CLI
 
