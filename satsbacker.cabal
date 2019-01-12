@@ -21,6 +21,8 @@ executable satsbacker
   other-modules: Bitcoin.Bech32
                  Bitcoin.Denomination
                  Bitcoin.Network
+                 Crypto.Macaroons
+                 Crypto.Macaroons.Verifiers
                  Database.SQLite.Table
                  Invoicing
                  Network.Lightning.Bolt11
@@ -36,21 +38,29 @@ executable satsbacker
                  Network.RPC.Internal
                  Network.RPC.JsonRPC
                  Network.RPC.PeerState
+                 Satsbacker.AmountConfig
                  Satsbacker.Cli
                  Satsbacker.Config
-                 Satsbacker.DB
+                 Satsbacker.Cookies
                  Satsbacker.Data.Checkout
                  Satsbacker.Data.Email
                  Satsbacker.Data.Invoice
                  Satsbacker.Data.InvoiceId
+                 Satsbacker.Data.Merged
+                 Satsbacker.Data.Site
                  Satsbacker.Data.Subscription
                  Satsbacker.Data.Tiers
                  Satsbacker.Data.TiersPage
                  Satsbacker.Data.User
+                 Satsbacker.DB
+                 Satsbacker.Email
+                 Satsbacker.Entropy
                  Satsbacker.Html
                  Satsbacker.Logging
+                 Satsbacker.Macaroons
                  Satsbacker.Server
                  Satsbacker.Templates
+                 Satsbacker.Templates.Render
 
   other-extensions:    RecordWildCards, NamedFieldPuns, ScopedTypeVariables, OverloadedStrings, BangPatterns, TupleSections, RankNTypes, FlexibleContexts, GeneralizedNewtypeDeriving, TypeFamilies, ViewPatterns, MultiParamTypeClasses, FunctionalDependencies, AllowAmbiguousTypes, FlexibleInstances, QuasiQuotes, EmptyDataDecls
 
@@ -77,6 +87,13 @@ executable satsbacker
                   vector >=0.12,
                   wai >=3.2,
                   wai-extra >=3.0,
+                  base16-bytestring,
+                  cryptonite,
+                  memory,
+                  time,
+                  cereal,
+                  cookie,
+                  smtp-mail,
                   wai-middleware-static >=0.8
 
   hs-source-dirs:      src
