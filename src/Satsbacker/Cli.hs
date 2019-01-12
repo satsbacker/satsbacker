@@ -20,6 +20,7 @@ import Satsbacker.Data.Email
 import Satsbacker.Data.Tiers
 import Satsbacker.Data.User
 import Satsbacker.Server
+import Satsbacker.AmountConfig
 
 createUserUsage :: IO ()
 createUserUsage = do
@@ -55,9 +56,12 @@ set conn key v = execute conn q (Only v)
 setSiteConfig :: MVar Connection -> Text -> Text -> IO ()
 setSiteConfig mvconn key val = do
   case key of
-    "hostname" -> withMVar mvconn $ \conn -> set conn "hostname" val
+    "hostname"     -> withMVar mvconn $ \conn -> set conn "hostname" val
+    "denomination" -> withMVar mvconn $ \conn ->
+                        case parseDenomination val of
+                          Nothing -> putStrLn "invalid denomination"
+                          Just d  -> set conn "amount_type" d
     _          -> putStrLn ("unknown config key " ++ T.unpack key)
-  where
 
 processArgs :: Config -> Text -> [Text] -> IO ()
 processArgs cfg@Config{..} arg rest =
@@ -87,7 +91,12 @@ usage = do
   putStrLn "  create-user"
   putStrLn "  server"
   putStrLn "  test-data"
-  putStrLn "  set hostname satsbacker.com"
+  putStrLn "  set <SITEVAR> satsbacker.com"
+  putStrLn ""
+  putStrLn "SITEVARs"
+  putStrLn ""
+  putStrLn "  hostname"
+  putStrLn "  denomination {sats,bits,BTC}"
   putStrLn ""
   exitFailure
 

@@ -104,19 +104,22 @@ showSats = prettyI ',' . round . getSats
 
 
 showBtc :: Btc -> Text
-showBtc = T.pack . showRational 8 . getBtc
+showBtc = stripZeros . T.pack . showRational 8 . getBtc
 
 
 showBits :: Bits -> Text
 showBits (Bits units) =
-    let
-        b = showRational 5 units
-    in
-      T.pack $ reverse $
-        case dropWhile (=='0') (reverse b) of
-          '.' : rest -> rest
-          xs -> xs
+    stripZeros (T.pack (showRational 5 units))
 
+
+stripZeros :: Text -> Text
+stripZeros b = T.reverse $
+  let t = T.dropWhile (=='0') (T.reverse b)
+  in
+  case T.uncons t of
+    Nothing          -> ""
+    Just ('.', rest) -> rest
+    _                -> t
 
 showRational :: Int -> Rational -> String
 showRational n r =

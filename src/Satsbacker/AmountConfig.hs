@@ -4,6 +4,7 @@ module Satsbacker.AmountConfig
     ( AmountConfig(..)
     , renderAmount
     , renderDenomination
+    , parseDenomination
     ) where
 
 import Data.Text (Text)
@@ -24,7 +25,7 @@ instance FromField AmountConfig where
     fromField f =
         case fromField f of
           Errors _ -> defReturn
-          Ok t     -> case parseAmountConfig t of
+          Ok t     -> case parseDenomination t of
                         Nothing -> defReturn
                         Just v  -> Ok v
         where
@@ -37,8 +38,8 @@ renderAmount cfg amt =
       AmountBits -> showBits (toBits amt)
       AmountBTC  -> showBtc  (toBtc amt)
 
-parseAmountConfig :: Text -> Maybe AmountConfig
-parseAmountConfig txt =
+parseDenomination :: Text -> Maybe AmountConfig
+parseDenomination txt =
     case txt of
       "sats" -> Just AmountSats
       "bits" -> Just AmountBits

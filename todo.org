@@ -6,15 +6,13 @@
 #+FILETAGS: satsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2019-01-12 Sat 12:24]
+#+CAPTION: Clock summary at [2019-01-12 Sat 12:38]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
 #+END:
 
 * Todos
-
-** TODO set denomination from cli
 
 ** TODO Re-subscribe email
 
