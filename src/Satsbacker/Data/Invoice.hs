@@ -12,6 +12,7 @@ module Satsbacker.Data.Invoice
     , CLInvoice(..)
     , CLInvoices(..)
     , fromNewInvoice
+    , invoiceToJSON
     , isPaid
     ) where
 
@@ -26,13 +27,14 @@ import qualified Data.Vector as V
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Lazy as BL
 
+import Satsbacker.AmountConfig
 import Satsbacker.Data.Email
 import Satsbacker.Data.InvoiceId (InvId(..))
 import Satsbacker.Data.Tiers (TierId)
 import Satsbacker.Data.User (UserId(..))
 import Database.SQLite.Table
 
-import Bitcoin.Denomination (MSats(..), toBits, showBits)
+import Bitcoin.Denomination (MSats(..))
 import Network.Lightning.Bolt11
 
 
@@ -88,22 +90,24 @@ guardEmpty :: (Eq t, Monoid t) => (t -> a) -> t -> Maybe a
 guardEmpty _ v | v == mempty = Nothing
 guardEmpty f txt             = Just (f txt)
 
-instance ToJSON Invoice where
-    toJSON Invoice{..} =
-        object $
-          ((\(MSats msat) -> "msatoshi" .= msat) <$> invoiceMSat) ?:
-          ((\msat -> "amount_bits" .= showBits (toBits msat)) <$> invoiceMSat) ?:
-          (fmap ("paid_at" .=)     invoicePaidAt) ?:
-          (guardEmpty ("description" .=) =<< invoiceDescription) ?:
-          (guardEmpty ("payreq" .=) =<< invoicePaymentRequest) ?:
-          [ "id"          .= invoiceId
-          , "rhash"       .= invoicePaymentHash
-          , "status"      .= invoiceStatus
-          , "expiry"      .= invoiceExpires
-          , "expires_at"  .= invoiceExpires
-              -- FIXME: this should be invoiceExpires + invoiceTimestamp
-          , "timestamp"   .= invoiceTimestamp
-          ]
+
+invoiceToJSON :: AmountConfig -> Invoice -> Value
+invoiceToJSON acfg Invoice{..} =
+  object $
+    ((\(MSats msat) -> "msatoshi" .= msat) <$> invoiceMSat) ?:
+    ((\msat -> "amount" .= renderAmount acfg msat) <$> invoiceMSat) ?:
+    (fmap ("paid_at" .=) invoicePaidAt) ?:
+    (guardEmpty ("description" .=) =<< invoiceDescription) ?:
+    (guardEmpty ("payreq" .=) =<< invoicePaymentRequest) ?:
+    [ "id"          .= invoiceId
+    , "rhash"       .= invoicePaymentHash
+    , "status"      .= invoiceStatus
+    , "expiry"      .= invoiceExpires
+    , "expires_at"  .= invoiceExpires
+        -- FIXME: this should be invoiceExpires + invoiceTimestamp
+    , "timestamp"   .= invoiceTimestamp
+    ]
+
 
 -- renderInvoice :: DisplayConfig -> Value
 -- renderInvoice = error "implement me"

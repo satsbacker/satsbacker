@@ -7,6 +7,7 @@ module Satsbacker.Data.Checkout
     , getCheckoutPage
     , mkCheckout
     , describeCheckoutError
+    , checkoutPageToJSON
     , CheckoutError(..)
     ) where
 
@@ -16,19 +17,20 @@ import Data.Aeson
 import Data.String (IsString)
 import Database.SQLite.Simple (Connection)
 
-import Satsbacker.Data.Tiers
-import Satsbacker.Data.User
+import Bitcoin.Denomination (MSats)
+import Invoicing
+import Satsbacker.AmountConfig
 import Satsbacker.Config
 import Satsbacker.Data.Invoice
+import Satsbacker.Data.Site (Site(..))
 import Satsbacker.Data.InvoiceId (InvId(..))
-import Invoicing
-import Bitcoin.Denomination (MSats, toBits, showBits)
+import Satsbacker.Data.Tiers
+import Satsbacker.Data.User
 
 import Network.RPC.Config (SocketConfig(..))
 import Network.RPC.CLightning (listinvoices)
 
 import Data.Text (Text)
-import qualified Data.Text as T
 
 data CheckoutPage = CheckoutPage
   { checkoutTier    :: Tier
@@ -42,12 +44,12 @@ data CheckoutError =
   | InvalidTier String
   deriving Show
 
-instance ToJSON CheckoutPage where
-    toJSON CheckoutPage{..} =
-        object [ "tier"    .= checkoutTier
-               , "invoice" .= checkoutInvoice
-               , "user" .= checkoutUser
-               ]
+checkoutPageToJSON :: AmountConfig -> CheckoutPage -> Value
+checkoutPageToJSON acfg CheckoutPage{..} =
+  object [ "tier"    .= tierToJSON acfg checkoutTier
+         , "invoice" .= invoiceToJSON acfg checkoutInvoice
+         , "user"    .= checkoutUser
+         ]
 
 describeCheckoutError :: IsString p => CheckoutError -> p
 describeCheckoutError checkoutErr =
@@ -76,11 +78,13 @@ safeNewInvoice cfgRPC msat desc = do
       Right inv -> Right inv
 
 -- TODO: denominationdisplay
-mkInvoiceDesc :: Username -> MSats -> Text -> Text
-mkInvoiceDesc (Username name) msat desc =
-    "Back " <> name <> " at " <> T.pack amountBits <> " bits per month: " <> desc
+mkInvoiceDesc :: AmountConfig -> Username -> MSats -> Text -> Text
+mkInvoiceDesc acfg (Username name) msat desc =
+    "Back " <> name <> " at " <> amount
+            <> " " <> denom <> " per month: " <> desc
     where
-      amountBits = showBits (toBits msat)
+      amount = renderAmount acfg msat
+      denom  = renderDenomination acfg
 
 getCheckoutPage :: Config -> InvoiceRef -> IO (Either CheckoutError CheckoutPage)
 getCheckoutPage Config{..} InvoiceRef{..} = do
@@ -119,5 +123,6 @@ mkCheckout Config{..} tierId = do
       let msat    = tierAmountMSats tdef
           tdesc   = tierDescription tdef
           backee  = userName user
-          invDesc = mkInvoiceDesc backee msat tdesc
+          acfg    = siteAmountCfg cfgSite
+          invDesc = mkInvoiceDesc acfg backee msat tdesc
       safeNewInvoice cfgRPC msat invDesc

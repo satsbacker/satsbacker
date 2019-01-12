@@ -19,6 +19,7 @@ import Database.SQLite.Simple.ToField
 
 import Database.SQLite.Table (Table(..))
 import Satsbacker.Data.Email
+import Satsbacker.AmountConfig
 
 import qualified Data.Text as T
 
@@ -100,17 +101,17 @@ instance ToJSON User where
                , "email"    .= getEmail userEmail
                ]
 
-instance ToJSON UserPage where
-    toJSON UserPage{..} =
-        object [ "user"   .= userPageUser
-               , "stats"  .= userPageStats
-               ]
+userPageToJSON :: AmountConfig -> UserPage -> Value
+userPageToJSON acfg UserPage{..} =
+  object [ "user"   .= userPageUser
+          , "stats" .= userStatsToJSON acfg userPageStats
+          ]
 
-instance ToJSON UserStats where
-    toJSON UserStats{..} =
-        object [ "backers"  .= userStatsBackers
-               , "perMonth" .= showBits (toBits userStatsPerMonth)
-               ]
+userStatsToJSON :: AmountConfig -> UserStats -> Value
+userStatsToJSON acfg UserStats{..} =
+  object [ "backers"  .= userStatsBackers
+          , "perMonth" .= renderAmount acfg userStatsPerMonth
+          ]
 
 defaultPermissions :: Permissions
 defaultPermissions = Permissions 0

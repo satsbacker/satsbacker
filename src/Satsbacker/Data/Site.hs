@@ -12,6 +12,7 @@ import Data.Aeson
 import Database.SQLite.Simple
 import Database.SQLite.Simple.ToField
 import Database.SQLite.Simple.FromField
+import Satsbacker.AmountConfig
 
 import Database.SQLite.Table (Table(..))
 
@@ -21,30 +22,32 @@ newtype HostName = HostName { getHost :: Text }
     deriving (ToJSON, ToField, FromField)
 
 data Site = Site {
-      siteName     :: Text
-    , siteHostName :: HostName
-    , siteProtocol :: Protocol
+      siteName      :: Text
+    , siteHostName  :: HostName
+    , siteProtocol  :: Protocol
+    , siteAmountCfg :: AmountConfig
     }
 
 siteFields :: [Text]
-siteFields = ["name", "hostname"]
+siteFields = ["name", "hostname", "amount_type"]
 
 instance ToJSON Site where
     toJSON site =
         let
-            Site name hostname _ = site
+            Site name hostname _ acfg = site
         in
-          object [ "name"     .= name
-                 , "hostname" .= hostname
+          object [ "name"        .= name
+                 , "hostname"    .= hostname
+                 , "amount_type" .= renderDenomination acfg
                  ]
 
 
 instance ToRow Site where
     toRow site =
         let
-            Site f1 f2 _f = site
+            Site f1 f2 _ f3 = site
         in
-            toRow (f1, f2)
+            toRow (f1, f2, f3)
 
 
 instance FromRow Site where
@@ -52,6 +55,7 @@ instance FromRow Site where
         Site <$> field
              <*> field
              <*> pure (Protocol "https")
+             <*> field
 
 instance Table Site where
     tableName _   = "site"

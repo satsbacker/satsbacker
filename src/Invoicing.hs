@@ -26,6 +26,7 @@ import qualified Data.ByteString.Char8 as B8
 
 import Satsbacker.Config
 import Satsbacker.Data.Invoice
+import Satsbacker.Data.Site (Site(..))
 import Satsbacker.Data.InvoiceId (newInvoiceId, encodeInvoiceId, InvId(..))
 
 import Network.RPC.CLightning (listinvoices)
@@ -50,7 +51,7 @@ postInvoice Config{..} = do
   msatoshis   <- msats <$> param "msatoshi"
   description <-           param "description"
   inv <- liftIO (newInvoice cfgRPC msatoshis description)
-  json inv
+  json $ invoiceToJSON (siteAmountCfg cfgSite) inv
 
 
 micro :: Int

@@ -92,11 +92,11 @@ instance ToJSON Config where
             network = lncfgNetwork lncfg
         in
           object
-            [ "network"    .= network
-            , "is_testnet" .= (network == Testnet)
-            , "peer"       .= showLnPeer lncfg
-            , "site"       .= site
-            , "email"      .= email
+            [ "network"     .= network
+            , "is_testnet"  .= (network == Testnet)
+            , "peer"        .= showLnPeer lncfg
+            , "site"        .= site
+            , "email"       .= email
             ]
 
 
@@ -229,19 +229,19 @@ getConfig = do
       resolvedHost = if isProd
                       then siteHostName site_
                       else debugHostname
-      site' = site_ { siteHostName = resolvedHost } 
+      site' = site_ { siteHostName = resolvedHost }
       site = if isProd
                then site'
                else site' { siteProtocol = Protocol "http" }
       cfg = Config {
-              cfgConn      = mvconn
-            , cfgRPC       = socketCfg
-            , cfgPayNotify = mvnotify
-            , cfgLnConfig  = lncfg
-            , cfgSite      = site
-            , cfgSecret    = Secret "secret" -- TODO: macaroon secret
-            , cfgEmail     = Address (Just "satsbacker") "noreply@satsbacker.com" -- TODO: macaroon secret
-            , cfgTemplates = templates
+              cfgConn         = mvconn
+            , cfgRPC          = socketCfg
+            , cfgPayNotify    = mvnotify
+            , cfgLnConfig     = lncfg
+            , cfgSite         = site
+            , cfgSecret       = Secret "secret" -- TODO: macaroon secret
+            , cfgEmail        = Address (Just "satsbacker") "noreply@satsbacker.com" -- TODO: macaroon secret
+            , cfgTemplates    = templates
             }
   logError ("[site] using hostname " ++ T.unpack (showSiteConfig site))
   _ <- forkIO (waitInvoices 0 payindex cfg)

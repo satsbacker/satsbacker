@@ -4,10 +4,13 @@
 module Satsbacker.Data.TiersPage
     ( TiersPage(..)
     , mkTiersPage
+    , tiersPageToJSON
     ) where
 
 import Data.Aeson
 import Data.Text (Text)
+
+import Satsbacker.AmountConfig
 
 import Satsbacker.Data.User
 import Satsbacker.Data.Tiers
@@ -21,14 +24,13 @@ data TiersPage = TiersPage {
     }
 
 
-instance ToJSON TiersPage where
-    toJSON TiersPage{..} =
-        object [ "tiers"    .= tiersRows
-               , "user"     .= tiersPageUser
-               , "colwidth" .= tiersColumnWidth
-               , "ncolumns" .= tiersNumColumns
-               ]
-
+tiersPageToJSON :: AmountConfig -> TiersPage -> Value
+tiersPageToJSON acfg TiersPage{..} =
+  object [ "tiers"    .= map (tierColsToJSON acfg) tiersRows
+         , "user"     .= tiersPageUser
+         , "colwidth" .= tiersColumnWidth
+         , "ncolumns" .= tiersNumColumns
+         ]
 
 mkTiersPage :: User -> Int -> [Tier] -> TiersPage
 mkTiersPage user cols tiers =

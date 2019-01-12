@@ -71,7 +71,8 @@ migrations = [
 
      "ALTER TABLE site ADD hostname TEXT", -- 10
      "UPDATE site set (hostname) = ('localhost')", -- 11
-     "ALTER TABLE subscriptions ADD invoice_id TEXT" -- 12
+     "ALTER TABLE subscriptions ADD invoice_id TEXT", -- 12
+     "ALTER TABLE site ADD amount_type TEXT" -- 13
   ]
 
 hasVersionTable :: Connection -> IO Bool

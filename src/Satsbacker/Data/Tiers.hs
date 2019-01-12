@@ -13,6 +13,7 @@ import Data.Aeson
 
 import Bitcoin.Denomination
 import Database.SQLite.Table
+import Satsbacker.AmountConfig (AmountConfig(..), renderAmount)
 import Satsbacker.Data.User (UserId(..))
 
 import qualified Data.HashMap.Lazy as M
@@ -51,36 +52,36 @@ instance ToJSON TierType where
     toJSON Standard = toJSON ("standard" :: Text)
     toJSON Custom   = toJSON ("custom" :: Text)
 
-instance ToJSON TierDef where
-    toJSON TierDef{..} =
-        object [ "description"  .= tierDescription
-               , "quota"        .= tierQuota
-               , "amount_fiat"  .= tierAmountFiat
-               , "amount_msats" .= tierAmountMSats
-               , "amount_bits"  .= showBits (toBits tierAmountMSats)
-               , "type"         .= tierAmountMSats
-               , "is_custom"    .= (tierType == Custom)
-               ]
+
+tierDefJSON :: AmountConfig -> TierDef -> Value
+tierDefJSON acfg TierDef{..} =
+    object [ "description"  .= tierDescription
+           , "quota"        .= tierQuota
+           , "amount"       .= renderAmount acfg tierAmountMSats
+           , "amount_fiat"  .= tierAmountFiat
+           , "amount_msats" .= tierAmountMSats
+           , "amount_sats"  .= showSats (toSats tierAmountMSats)
+           , "amount_bits"  .= showBits (toBits tierAmountMSats)
+           , "type"         .= tierAmountMSats
+           , "is_custom"    .= (tierType == Custom)
+           ]
 
 instance ToJSON TierStats where
     toJSON TierStats{..} =
         object ["subs" .= tierSubs]
 
-instance ToJSON Tier where
-    toJSON Tier{..} =
-        case (toJSON tierDef, toJSON tierStats) of
-          (Object d, Object s) ->
-              let obj = d <> s
-                  tid = M.insert "tier_id" (toJSON tierId) obj
-              in Object tid
-          _ -> Object mempty
+tierToJSON :: AmountConfig -> Tier -> Value
+tierToJSON amountCfg Tier{..} =
+  case (tierDefJSON amountCfg tierDef, toJSON tierStats) of
+    (Object d, Object s) ->
+        let obj = d <> s
+            tid = M.insert "tier_id" (toJSON tierId) obj
+        in Object tid
+    _ -> Object mempty
 
-
-instance ToJSON TierCols where
-    toJSON (TierCols tiers) =
-        object ["columns" .= tiers]
-
-
+tierColsToJSON :: AmountConfig -> TierCols -> Value
+tierColsToJSON acfg (TierCols tiers) =
+    object ["columns" .= map (tierToJSON acfg) tiers]
 
 tierDefFields :: [Text]
 tierDefFields =

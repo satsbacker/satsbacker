@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Bitcoin.Denomination
@@ -7,12 +8,15 @@ module Bitcoin.Denomination
     , Bits(..)
     , Btc(..)
     , bits, msats, sats, toBits, btc, toSats, toBtc
-    , showBits
+    , showSats, showBits, showBtc
     ) where
 
 import Data.Aeson
 import Data.Int (Int64)
 import Text.Printf
+import Data.Text (Text)
+
+import qualified Data.Text as T
 
 class Denomination a where
   toMsats :: a -> MSats
@@ -85,12 +89,30 @@ instance Show Sats where
 instance Show Btc where
   show (Btc units) = printf "%s BTC" (showRational 3 units)
 
-showBits :: Bits -> String
+
+-- | Pretty print an 'Int' given an optional thousands separator
+prettyI :: Char -> Int -> Text
+prettyI s n =
+  let ni  = T.pack $ show $ abs n
+      nis = T.intercalate (T.singleton s) $
+            reverse $ map T.reverse $ T.chunksOf 3 $ T.reverse ni
+  in if n < 0 then "-" <> nis else nis
+
+
+showSats :: Sats -> Text
+showSats = prettyI ',' . round . getSats
+
+
+showBtc :: Btc -> Text
+showBtc = T.pack . showRational 8 . getBtc
+
+
+showBits :: Bits -> Text
 showBits (Bits units) =
     let
         b = showRational 5 units
     in
-      reverse $
+      T.pack $ reverse $
         case dropWhile (=='0') (reverse b) of
           '.' : rest -> rest
           xs -> xs

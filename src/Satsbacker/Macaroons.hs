@@ -101,7 +101,7 @@ userVerifier uid = equalVerifier "user" (pure uid) decimal
 parseUserId :: Caveat -> Maybe UserId
 parseUserId caveat =
   case equalParser "user" decimal caveat of
-    Left  err -> Nothing
+    Left  _   -> Nothing
     Right uid -> Just (UserId uid)
 
 

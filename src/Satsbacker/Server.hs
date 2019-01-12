@@ -29,6 +29,7 @@ import Satsbacker.Data.Email
 import Satsbacker.Data.Invoice
 import Satsbacker.Data.InvoiceId (InvId(..))
 import Satsbacker.Data.Merged
+import Satsbacker.Data.Site (Site(..))
 import Satsbacker.Data.Tiers
 import Satsbacker.Data.TiersPage
 import Satsbacker.Data.User
@@ -95,9 +96,10 @@ lookupUserPage :: Config -> ActionM ()
 lookupUserPage cfg@Config{..} = do
   (userId, user) <- withUser cfgConn
   mstats <- liftIO $ withMVar cfgConn $ \conn -> getUserStats conn userId
-  let stats = fromMaybe (UserStats 0 0) mstats
+  let stats    = fromMaybe (UserStats 0 0) mstats
       userPage = UserPage user stats
-  renderTemplateM cfg "user" userPage
+      acfg     = siteAmountCfg cfgSite
+  renderTemplateM cfg "user" (userPageToJSON acfg userPage)
 
 
 withUser :: MVar Connection -> ActionM (UserId, User)
@@ -114,7 +116,8 @@ tiersPage cfg@Config{..} = do
   (userId, user) <- withUser cfgConn
   tiers <- liftIO $ withMVar cfgConn $ \conn -> getTiers conn userId
   let tpage = mkTiersPage user 2 tiers
-  renderTemplateM cfg "back" tpage
+      acfg  = siteAmountCfg cfgSite
+  renderTemplateM cfg "back" (tiersPageToJSON acfg tpage)
 
 
 checkoutErrorPage :: CheckoutError -> ActionM ()
@@ -155,7 +158,9 @@ getCheckout cfg@Config{..} = do
   case echeckoutPage of
     Left err -> do liftIO $ logError (show err)
                    checkoutErrorPage err
-    Right checkoutPage -> renderTemplateM cfg "checkout" checkoutPage
+    Right checkoutPage ->
+      let acfg = siteAmountCfg cfgSite
+      in renderTemplateMV cfg "checkout" (checkoutPageToJSON acfg checkoutPage)
 
 
 simplePage :: Config -> Text -> ActionM ()
@@ -177,7 +182,7 @@ setEmailConfirmed :: Connection -> UserId -> IO ()
 setEmailConfirmed conn (UserId userId) = do
   execute conn "update users set (email_confirmed) = 1 where id = ?"
           (Only userId)
-                  
+
 assocSubscriptions :: Connection -> Email -> UserId -> IO ()
 assocSubscriptions conn (Email email) (UserId userId) =
   execute conn "update subscriptions set (user_id) = (?) where user_email = ?"
