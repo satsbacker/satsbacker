@@ -112,15 +112,27 @@ input.payreq {
     font-size: 4rem;
 }
 
+.hero-bg {
+    align-items: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    border-bottom: 4px solid black;
+    border-top: 4px solid black;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    font-size: 2.5rem;
+    height: 400px;
+    justify-content: center;
+    margin-bottom: 1em;
+    text-shadow: 1px 1px black;
+}
+
 .hero {
     padding: 1em;
-    height: 400px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    background-color: pink;
+    text-align: center;
 }
+
 
 .button-large {
     height: 5em;
