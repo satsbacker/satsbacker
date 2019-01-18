@@ -142,7 +142,7 @@ persistSubFromInvId mvconn (InvId invId) = do
                 , subPayerId     = invRefPayerId
                 , subPayerEmail  = invRefEmail
                 , subPayerCookie = Nothing -- TODO: do we need cookies?
-                , subValidUntil  = fromIntegral timestamp + 2678400
+                , subValidUntil  = fromIntegral timestamp + (86400 * 31)
                     -- NOTE: always 31 days
                 , subTierId      = invRefTierId
                 , subInvoiceId   = invRefInvoiceId

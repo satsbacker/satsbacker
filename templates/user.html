@@ -4,13 +4,22 @@
 <head>
 {{>head}}
     <title>{{ name }} is making {{making}} | {{config.site.name}}</title>
+    <style>
+     .hero-bg {
+         background-image: url("https://pbs.twimg.com/profile_banners/9918032/1531711830/1500x500");
+         background-repeat: no-repeat;
+         background-size: cover;
+         color: white;
+         font-size: 2.5rem;
+         margin-bottom: 1em;
+         text-shadow: 1px 1px black;
+     }
+    </style>
 </head>
 <body>
     {{>header}}
-    <div class="hero">
-        <h1>
-            <p><b>{{name}}</b> is making {{making}}</p>
-        </h1>
+    <div class="hero hero-bg">
+        <p class="making"><b>{{name}}</b> is making {{making}}</p>
         {{#stats}}
         <div class="overview">
             <span class="backers"><b>{{backers}}</b> backers</span>

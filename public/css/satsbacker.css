@@ -108,9 +108,18 @@ input.payreq {
     font-size: 2rem;
 }
 
+.making {
+    font-size: 4rem;
+}
+
 .hero {
     padding: 1em;
-    text-align: center;
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background-color: pink;
 }
 
 .button-large {
