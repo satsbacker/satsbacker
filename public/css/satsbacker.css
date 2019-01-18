@@ -124,7 +124,6 @@ input.payreq {
     font-size: 2.5rem;
     height: 400px;
     justify-content: center;
-    margin-bottom: 1em;
     text-shadow: 1px 1px black;
 }
 
@@ -142,6 +141,12 @@ input.payreq {
 .header {
     display: inline-block;
     margin: 0.8em 1.2em 0.8em 1.2em;
+}
+
+.overview {
+    text-align: center;
+    font-size: 1.8rem;
+    margin: 1.5em 0 2em 0;
 }
 
 .overview span {
