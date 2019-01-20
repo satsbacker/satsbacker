@@ -3,6 +3,7 @@
 
 module Satsbacker.Data.Subscription
     ( Subscription(..)
+    , SubId(..)
     ) where
 
 import Data.Text (Text)
@@ -19,6 +20,7 @@ instance Table Subscription where
     tableName _ = "subscriptions"
     tableFields _ = subscriptionFields
 
+
 subscriptionFields :: [Text]
 subscriptionFields =
     [ "for_user"
@@ -29,6 +31,10 @@ subscriptionFields =
     , "tier_id"
     , "invoice_id"
     ]
+
+
+newtype SubId = SubId { getSubId :: Int }
+
 
 data Subscription = Subscription
   { subForUser     :: UserId

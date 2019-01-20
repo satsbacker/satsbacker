@@ -5,6 +5,7 @@
 
 module Satsbacker.Server where
 
+import Control.Monad.Logger
 import Control.Applicative (optional)
 import Control.Concurrent (MVar, withMVar)
 import Control.Monad.IO.Class (liftIO)
@@ -34,11 +35,11 @@ import Satsbacker.Data.Tiers
 import Satsbacker.Data.TiersPage
 import Satsbacker.Data.User
 import Satsbacker.Email
-import Satsbacker.Logging
 import Satsbacker.Macaroons
 import Satsbacker.Templates.Render
 
 import qualified Data.Text.Lazy as LT
+import qualified Data.Text as T
 import qualified Crypto.Macaroons as Macaroon
 
 
@@ -156,7 +157,7 @@ getCheckout cfg@Config{..} = do
   invRef  <- maybe (fail "checkout: could not find invoice id") return minvRef
   echeckoutPage <- liftIO (getCheckoutPage cfg invRef)
   case echeckoutPage of
-    Left err -> do liftIO $ logError (show err)
+    Left err -> do runStderrLoggingT (logErrorN (T.pack (show err)))
                    checkoutErrorPage err
     Right checkoutPage ->
       let acfg = siteAmountCfg cfgSite

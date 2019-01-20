@@ -6,15 +6,18 @@ module Database.SQLite.Table
     , insert
     , insertL
     , fetchOne
+    , fetchOneL
     , Search(..)
     , search
     , searchAny
+    , withConn
     , Limit(..)
     , onlyOne
     , noLimit
     ) where
 
 import Data.Text (Text)
+import Control.Monad.IO.Class
 import Data.Maybe (listToMaybe)
 import Control.Concurrent.MVar (MVar, withMVar)
 import Database.SQLite.Simple
@@ -54,14 +57,22 @@ insert conn row = do
   execute conn (Query q) row
   fmap fromIntegral (lastInsertRowId conn)
 
-
-insertL :: (Table a, ToRow a) => MVar Connection -> a -> IO Int
-insertL mvconn row = withMVar mvconn $ \conn -> insert conn row
+withConn :: MonadIO m => MVar a1 -> (a1 -> IO a2) -> m a2
+withConn mvconn fn = liftIO (withMVar mvconn fn)
+       
+insertL :: (MonadIO m, Table a, ToRow a)
+        => MVar Connection -> a -> m Int
+insertL mvconn row = liftIO $ withMVar mvconn $ \conn -> insert conn row
 
 fetchOne :: (Table a, FromRow a, ToField f, Show f)
          => Connection -> Search f -> IO (Maybe a)
 fetchOne conn srch =
     fmap listToMaybe (fetch conn srch onlyOne)
+
+fetchOneL :: (MonadIO m, Table a, FromRow a, ToField f, Show f)
+          => MVar Connection -> Search f -> m (Maybe a)
+fetchOneL mvconn srch =
+  liftIO $ withMVar mvconn $ \conn -> fetchOne conn srch
 
 fetch :: forall a f. (Table a, FromRow a, ToField f, Show f)
       => Connection -> Search f -> Limit -> IO [a]

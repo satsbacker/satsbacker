@@ -10,6 +10,7 @@ import Data.Aeson
 
 data BitcoinNetwork = Mainnet
                     | Testnet
+                    | Regtest
                     deriving (Eq, Ord, Enum)
 
 instance Show BitcoinNetwork where

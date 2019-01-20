@@ -5,9 +5,11 @@
 
 module Satsbacker.Config where
 
-import Control.Concurrent (forkIO)
+import UnliftIO.Concurrent (forkIO)
 import Control.Concurrent.MVar
+import Control.Monad.IO.Class
 import Control.Exception (SomeException, try)
+import Control.Monad.Logger
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Functor (void)
@@ -34,7 +36,6 @@ import Satsbacker.Data.InvoiceId
 import Satsbacker.Data.Site (Site(..), HostName(..), Protocol(..))
 import Satsbacker.Data.Subscription
 import Satsbacker.Data.Tiers (TierDef(..))
-import Satsbacker.Logging
 import Satsbacker.Templates
 import Text.Mustache (Template)
 
@@ -121,21 +122,21 @@ persistPayIndex conn payind =
   execute conn "UPDATE payindex SET payindex = ?" (Only payind)
 
 
-persistSubFromInvId :: MVar Connection -> InvId -> IO (Maybe Subscription)
+persistSubFromInvId :: (MonadIO m, MonadLogger m)
+                    => MVar Connection -> InvId -> m (Maybe Subscription)
 persistSubFromInvId mvconn (InvId invId) = do
-  minvRef <- withMVar mvconn $ \conn ->
-    fetchOne conn (search "invoice_id" invId)
+  minvRef <- fetchOneL mvconn (search "invoice_id" invId)
 
   case minvRef of
-    Nothing -> do logError $ "[WARN] couldn't find paid invoiceId " ++ show invId
+    Nothing -> do logErrorN $ "[WARN] couldn't find paid invoiceId "
+                               <> T.pack (show invId)
                   return Nothing
     Just InvoiceRef{..} -> do
-      mtier <- withMVar mvconn $ \conn ->
-        fetchOne conn (search "id" invRefTierId)
+      mtier <- fetchOneL mvconn (search "id" invRefTierId)
 
       TierDef{..} <- maybe (fail "could not find tier for invoice") return mtier
 
-      CTime timestamp <- epochTime
+      CTime timestamp <- liftIO epochTime
 
       let sub = Subscription {
                   subForUser     = tierUserId
@@ -148,32 +149,34 @@ persistSubFromInvId mvconn (InvId invId) = do
                 , subInvoiceId   = invRefInvoiceId
                 }
 
-      _ <- withMVar mvconn $ \conn -> insert conn sub
+      _ <- insertL mvconn sub
       return (Just sub)
 
 
-waitInvoices :: Int -> Int -> Config -> IO ()
+waitInvoices :: (MonadIO m, MonadLogger m) => Int -> Int -> Config -> m ()
 waitInvoices 10 _ _ = fail "Too many errors when waiting for payments"
 waitInvoices !errs !payindex !cfg@Config{..} = do
   ewi :: Either SomeException WaitInvoice <-
-           try $ rpc cfgRPC "waitanyinvoice" [payindex]
+           liftIO $ try $ rpc cfgRPC "waitanyinvoice" [payindex]
   case ewi of
-    Left err -> logError (show err) >> waitInvoices (errs + 1) payindex cfg
+    Left err -> do logErrorN (T.pack (show err))
+                   waitInvoices (errs + 1) payindex cfg
     Right !wi@(WaitInvoice (!index, !inv)) -> do
       _sub <- persistSubFromInvId cfgConn (invoiceId (getCLInvoice inv))
-      isEmpty <- isEmptyMVar cfgPayNotify
+      isEmpty <- liftIO (isEmptyMVar cfgPayNotify)
       if isEmpty
-        then putMVar cfgPayNotify wi
-        else void (swapMVar cfgPayNotify wi)
-      withMVar cfgConn $ \conn -> persistPayIndex conn index
+        then liftIO (putMVar cfgPayNotify wi)
+        else liftIO (void (swapMVar cfgPayNotify wi))
+      withConn cfgConn $ \conn -> persistPayIndex conn index
       waitInvoices 0 index cfg
 
 
-getLightningConfig :: SocketConfig -> IO LightningConfig
+getLightningConfig :: (MonadIO m, MonadLogger m)
+                   => SocketConfig -> m LightningConfig
 getLightningConfig cfg = do
-  mlncfg <- timeout (5 * 1000000) (rpc_ cfg "getinfo")
+  mlncfg <- liftIO $ timeout (5 * 1000000) (rpc_ cfg "getinfo")
   lncfg <- maybe timeouterr return mlncfg
-  logError $ "[ln] using peer " ++ T.unpack (showLnPeer lncfg)
+  logErrorN $ "[ln] using peer " <> showLnPeer lncfg
   return lncfg
   where
     timeouterr = fail "timeout during clightning getinfo call"
@@ -212,13 +215,13 @@ showSiteConfig Site{..} =
 getConfig :: IO Config
 getConfig = do
   port <- getPort
-  socketCfg <- getSocketConfig
+  socketCfg <- runLog getSocketConfig
   isProd <- getIsProd
-  lncfg <- getLightningConfig socketCfg
-  logError $ "[ln] detected Bitcoin " ++ show (lncfgNetwork lncfg)
-                 ++ " from clightning"
-  conn <- openDb (lncfgNetwork lncfg)
-  migrate conn
+  lncfg <- runLog $ getLightningConfig socketCfg
+  logErr $ "[ln] detected Bitcoin " <> T.pack (show (lncfgNetwork lncfg))
+              <> " from clightning"
+  conn <- runLog $ openDb (lncfgNetwork lncfg)
+  liftIO (migrate conn)
   payindex  <- getPayIndex conn
   msite     <- fetchOne conn searchAny
   site_     <- maybe (fail "could not find site config, corrupt?") return msite
@@ -243,23 +246,26 @@ getConfig = do
             , cfgEmail        = Address (Just "satsbacker") "noreply@satsbacker.com" -- TODO: macaroon secret
             , cfgTemplates    = templates
             }
-  logError ("[site] using hostname " ++ T.unpack (showSiteConfig site))
-  _ <- forkIO (waitInvoices 0 payindex cfg)
+  logErr ("[site] using hostname " <> showSiteConfig site)
+  _ <- forkIO (runLog (waitInvoices 0 payindex cfg))
   return cfg
+  where
+    logErr   = runLog . logErrorN
+    runLog m = runStderrLoggingT m 
 
 
-getSocketConfig :: IO SocketConfig
+getSocketConfig :: (MonadIO m, MonadLogger m) => m SocketConfig
 getSocketConfig = do
   path <- getRPCSocket
   return (SocketConfig path Nothing)
 
 
-getRPCSocket :: IO FilePath
+getRPCSocket :: (MonadIO m, MonadLogger m) => m FilePath
 getRPCSocket = do
-  mstrsocket <- lookupEnv "RPCSOCK"
+  mstrsocket <- liftIO (lookupEnv "RPCSOCK")
   let from = if isJust mstrsocket
                then "RPCSOCK env"
                else "default setting"
       cfg = fromMaybe "/home/jb55/.lightning-bitcoin-rpc" mstrsocket
-  logError $ "[rpc] using " ++ cfg  ++ " from " ++ from
+  logErrorN ("[rpc] using " <> T.pack cfg <> " from " <> from)
   return cfg

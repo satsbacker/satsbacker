@@ -33,10 +33,12 @@ data TierDef = TierDef {
     }
     deriving Show
 
+
 data TierStats = TierStats {
       tierSubs :: Int
     }
     deriving Show
+
 
 data Tier = Tier {
       tierId   :: Int
@@ -44,6 +46,7 @@ data Tier = Tier {
     , tierStats :: TierStats
     }
     deriving Show
+
 
 newtype TierCols = TierCols { getTierCols :: [Tier] }
     deriving Show

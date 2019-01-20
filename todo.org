@@ -6,7 +6,7 @@
 #+FILETAGS: satsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2019-01-17 Thu 23:47]
+#+CAPTION: Clock summary at [2019-01-20 Sun 10:20]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
@@ -14,14 +14,18 @@
 
 * Todos
 
-** TODO Donation table
-- Really just the subscription table.
-- Which should probably be called donations
+** TODO Setup hspec
+** TODO Initial balance tests
 
 ** TODO Backer balance
 
 - Added to by subscriptions and donations
 - No expiry, used to calculate subscription levels daily
+- Postings may not sum to zero...  
+  
+*** How to update this table reliably?
+
+
 
 ** TODO Calculate effective subscription level
 

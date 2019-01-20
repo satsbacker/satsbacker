@@ -7,6 +7,8 @@ module Satsbacker.DB
     ) where
 
 import Control.Monad (unless)
+import Control.Monad.Logger
+import Control.Monad.IO.Class
 import Data.Maybe (listToMaybe)
 import Data.Text (Text)
 import Data.Foldable (traverse_)
@@ -15,9 +17,9 @@ import Database.SQLite.Simple
 import System.Directory (createDirectoryIfMissing)
 
 import qualified Data.ByteString as BS
+import qualified Data.Text as T
 
 import Bitcoin.Network
-import Satsbacker.Logging
 
 -- ensureDb :: FilePath -> IO ()
 -- ensureDb dataPath = do
@@ -102,14 +104,16 @@ saveMigration from to stmts = do
       contents = foldMap ((<>"\n") . fromQuery) stmts
   BS.writeFile (".migrations/" ++ fileName) (encodeUtf8 contents)
 
-openDb :: BitcoinNetwork -> IO Connection
+
+openDb :: (MonadIO m, MonadLogger m) => BitcoinNetwork -> m Connection
 openDb network =
   let dbfile = case network of
                  Mainnet -> "satsbacker.db"
                  Testnet -> "satsbacker-testnet.db"
+                 Regtest -> "satsbacker-regtest.db"
   in
-    do logError ("[db] using " ++ dbfile)
-       open dbfile
+    do logInfoN ("[db] using " <> dbfile)
+       liftIO (open (T.unpack dbfile))
 
 
 migrate :: Connection -> IO ()
