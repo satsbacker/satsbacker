@@ -135,7 +135,7 @@ postCheckout cfg@Config{..} = do
   user    <- fmap Username (param "user")
   email   <- fmap Email    (param "email")
   payerId <- fmap (fmap UserId) (optional (param "payer_id"))
-  einv <- liftIO $ mkCheckout cfg tierId
+  einv <- liftIO (mkCheckout cfg tierId)
   case einv of
     Left err ->
         let desc = describeCheckoutError err
@@ -144,8 +144,7 @@ postCheckout cfg@Config{..} = do
     Right inv -> do let invId  = invoiceId inv
                         invRef = InvoiceRef invId tierId email payerId
                         coUri  = "/checkout/" <> getInvId (invoiceId inv)
-                    _ <- liftIO $ withMVar cfgConn $ \conn ->
-                           insert conn invRef
+                    _ <- insertL cfgConn invRef
                     redirect (LT.fromStrict coUri)
 
 

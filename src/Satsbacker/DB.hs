@@ -4,6 +4,7 @@
 module Satsbacker.DB
     ( migrate
     , openDb
+    , dbFilename
     ) where
 
 import Control.Monad (unless)
@@ -105,15 +106,18 @@ saveMigration from to stmts = do
   BS.writeFile (".migrations/" ++ fileName) (encodeUtf8 contents)
 
 
+dbFilename :: BitcoinNetwork -> FilePath
+dbFilename Mainnet = "satsbacker.db"
+dbFilename Testnet = "satsbacker-testnet.db"
+dbFilename Regtest = "satsbacker-regtest.db"
+
+
 openDb :: (MonadIO m, MonadLogger m) => BitcoinNetwork -> m Connection
 openDb network =
-  let dbfile = case network of
-                 Mainnet -> "satsbacker.db"
-                 Testnet -> "satsbacker-testnet.db"
-                 Regtest -> "satsbacker-regtest.db"
+  let dbfile = dbFilename network
   in
-    do logInfoN ("[db] using " <> dbfile)
-       liftIO (open (T.unpack dbfile))
+    do logInfoN ("[db] using " <> T.pack dbfile)
+       liftIO (open dbfile)
 
 
 migrate :: Connection -> IO ()

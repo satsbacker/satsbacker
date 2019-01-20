@@ -16,10 +16,12 @@ data BitcoinNetwork = Mainnet
 instance Show BitcoinNetwork where
     show Mainnet = "mainnet"
     show Testnet = "testnet"
+    show Regtest = "regtest"
 
 instance ToJSON BitcoinNetwork where
     toJSON Mainnet = String "mainnet"
     toJSON Testnet = String "testnet"
+    toJSON Regtest = String "regtest"
 
 parseNetwork :: Text -> Maybe BitcoinNetwork
 parseNetwork "bitcoin" = Just Mainnet

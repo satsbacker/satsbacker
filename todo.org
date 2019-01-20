@@ -6,7 +6,7 @@
 #+FILETAGS: satsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2019-01-20 Sun 10:20]
+#+CAPTION: Clock summary at [2019-01-20 Sun 11:36]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
@@ -16,6 +16,8 @@
 
 ** TODO Setup hspec
 ** TODO Initial balance tests
+
+** TODO Generate initial macaroon secret 
 
 ** TODO Backer balance
 

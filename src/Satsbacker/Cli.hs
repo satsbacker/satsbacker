@@ -76,7 +76,7 @@ processArgs cfg@Config{..} arg rest =
           setSiteConfig cfgConn key val
 
       ("test-data", _) ->
-          testData
+          testData cfgConn
 
       (_, _) ->
           usage
@@ -103,15 +103,14 @@ usage = do
 
 
 
-testData :: IO ()
-testData = do
-  Config{..} <- getConfig
+testData :: MVar Connection -> IO ()
+testData mvconn = do
   user' <- createUser (Plaintext "test")
   let user = user' { userEmail = Email "jb55@jb55.com"
                    , userName  = Username "jb55"
                    , userMaking = "satsbacker"
                    }
-  withMVar cfgConn $ \conn -> do
+  withMVar mvconn $ \conn -> do
     userId <- insert conn user
     let tiers = testTierData (UserId userId)
     execute_ conn "update site set (hostname) = ('satsbacker.com')"
