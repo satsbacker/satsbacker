@@ -48,7 +48,7 @@ testConfig = do
   socketCfg <- getSocketConfig
   isProd    <- liftIO getIsProd
   let lncfg = testLightningConfig
-  logErrorN $ "[ln] detected Bitcoin " <> T.pack (show (lncfgNetwork lncfg))
+  logInfoN $ "[ln] detected Bitcoin " <> T.pack (show (lncfgNetwork lncfg))
                  <> " from clightning"
   conn <- openDb (lncfgNetwork lncfg)
   liftIO (migrate conn)
@@ -76,5 +76,6 @@ testConfig = do
             , cfgEmail        = Address (Just "satsbacker") "noreply@satsbacker.com" -- TODO: macaroon secret
             , cfgTemplates    = templates
             }
-  logErrorN ("[site] using hostname " <> showSiteConfig site)
+  logInfoN ("[site] using hostname " <> showSiteConfig site)
   return cfg
+

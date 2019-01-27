@@ -128,7 +128,7 @@ persistSubFromInvId mvconn (InvId invId) = do
   minvRef <- fetchOneL mvconn (search "invoice_id" invId)
 
   case minvRef of
-    Nothing -> do logErrorN $ "[WARN] couldn't find paid invoiceId "
+    Nothing -> do logErrorN $ "couldn't find paid invoiceId "
                                <> T.pack (show invId)
                   return Nothing
     Just InvoiceRef{..} -> do
@@ -176,7 +176,7 @@ getLightningConfig :: (MonadIO m, MonadLogger m)
 getLightningConfig cfg = do
   mlncfg <- liftIO $ timeout (5 * 1000000) (rpc_ cfg "getinfo")
   lncfg <- maybe timeouterr return mlncfg
-  logErrorN $ "[ln] using peer " <> showLnPeer lncfg
+  logInfoN $ "[ln] using peer " <> showLnPeer lncfg
   return lncfg
   where
     timeouterr = fail "timeout during clightning getinfo call"
@@ -207,6 +207,7 @@ getPort = do
   mstrport <- lookupEnv "PORT"
   return (fromMaybe 8002 (mstrport >>= readMaybe))
 
+
 showSiteConfig :: Site -> Text
 showSiteConfig Site{..} =
   getProtocol siteProtocol <> "://" <> getHost siteHostName
@@ -217,9 +218,9 @@ getConfig = do
   port <- getPort
   socketCfg <- runLog getSocketConfig
   isProd <- getIsProd
-  lncfg <- runLog $ getLightningConfig socketCfg
-  logErr $ "[ln] detected Bitcoin " <> T.pack (show (lncfgNetwork lncfg))
-              <> " from clightning"
+  lncfg <- runLog (getLightningConfig socketCfg)
+  logInfo_ $ "[ln] detected Bitcoin " <> T.pack (show (lncfgNetwork lncfg))
+               <> " from clightning"
   conn <- runLog $ openDb (lncfgNetwork lncfg)
   liftIO (migrate conn)
   payindex  <- getPayIndex conn
@@ -250,8 +251,9 @@ getConfig = do
   _ <- forkIO (runLog (waitInvoices 0 payindex cfg))
   return cfg
   where
-    logErr   = runLog . logErrorN
-    runLog m = runStderrLoggingT m 
+    logInfo_  = runLog . logInfoN
+    logErr    = runLog . logErrorN
+    runLog m  = runStderrLoggingT m 
 
 
 getSocketConfig :: (MonadIO m, MonadLogger m) => m SocketConfig
@@ -267,5 +269,5 @@ getRPCSocket = do
                then "RPCSOCK env"
                else "default setting"
       cfg = fromMaybe "/home/jb55/.lightning-bitcoin-rpc" mstrsocket
-  logErrorN ("[rpc] using " <> T.pack cfg <> " from " <> from)
+  logInfoN ("[rpc] using " <> T.pack cfg <> " from " <> from)
   return cfg
