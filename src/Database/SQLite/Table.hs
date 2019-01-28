@@ -7,6 +7,7 @@ module Database.SQLite.Table
     , insertL
     , fetchOne
     , fetchOneL
+    , fetchOneL'
     , Search(..)
     , search
     , searchAny
@@ -14,6 +15,7 @@ module Database.SQLite.Table
     , Limit(..)
     , onlyOne
     , noLimit
+    , justOne
     ) where
 
 import Data.Text (Text)
@@ -59,20 +61,32 @@ insert conn row = do
 
 withConn :: MonadIO m => MVar a1 -> (a1 -> IO a2) -> m a2
 withConn mvconn fn = liftIO (withMVar mvconn fn)
-       
+
+
 insertL :: (MonadIO m, Table a, ToRow a)
         => MVar Connection -> a -> m Int
 insertL mvconn row = liftIO $ withMVar mvconn $ \conn -> insert conn row
+
 
 fetchOne :: (Table a, FromRow a, ToField f, Show f)
          => Connection -> Search f -> IO (Maybe a)
 fetchOne conn srch =
     fmap listToMaybe (fetch conn srch onlyOne)
 
+
 fetchOneL :: (MonadIO m, Table a, FromRow a, ToField f, Show f)
           => MVar Connection -> Search f -> m (Maybe a)
 fetchOneL mvconn srch =
   liftIO $ withMVar mvconn $ \conn -> fetchOne conn srch
+
+
+fetchOneL' :: (MonadIO m, Table a, FromRow a, ToField f, Show f)
+           => MVar Connection -> Search f -> m a
+fetchOneL' mvconn srch = liftIO $ do
+  mres <- withMVar mvconn $ \conn -> fetchOne conn srch
+  maybe (fail "row not found") return mres
+
+
 
 fetch :: forall a f. (Table a, FromRow a, ToField f, Show f)
       => Connection -> Search f -> Limit -> IO [a]
@@ -85,3 +99,12 @@ fetch conn (Search (term, val)) (Limit lim) =
             <>" WHERE "<>term<>" = ? "
             <>(if lim == 0 then "" else " LIMIT " <> T.pack (show lim))
     in query conn (Query q) (Only val)
+
+
+justOne :: Monad m => m [b] -> m b
+justOne m = do
+  res <- m
+  case res of
+    []  -> fail "expected a value"
+    [r] -> return r
+    _   -> fail "too many values returned"

@@ -33,6 +33,9 @@ mainRun runner =
 mainNoLog :: IO ()
 mainNoLog = mainRun runNoLoggingT
 
+mainWithLog :: IO ()
+mainWithLog = mainRun runStderrLoggingT
+
 allTests :: (MonadIO m, MonadLogger m) => Runner m -> Config -> IO ()
 allTests runner cfg = hspec $ do
   runIO (subscriptionTests runner cfg)

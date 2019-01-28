@@ -1,7 +1,7 @@
 
 all: satsbacker
 
-GHCOPS=-j -Wall -isrc -O
+GHCOPS=-j -Wall -isrc -O0
 
 satsbacker: src/Main.hs
 	ghc $(GHCOPS) --make $< -o $@
@@ -15,4 +15,4 @@ tests: src/Satsbacker/Test/Main.hs
 TAGS:
 	hasktags --etags src
 
-.PHONY: satsbacker TAGS
+.PHONY: satsbacker TAGS tests

@@ -6,7 +6,7 @@
 #+FILETAGS: satsbacker
 
 #+BEGIN: clocktable :maxlevel 1 :scope file
-#+CAPTION: Clock summary at [2019-01-20 Sun 11:36]
+#+CAPTION: Clock summary at [2019-01-27 Sun 16:51]
 | Headline     | Time   |
 |--------------+--------|
 | *Total time* | *0:00* |
@@ -14,11 +14,11 @@
 
 * Todos
 
-** TODO Setup hspec
-** TODO Initial balance tests
+
+** DONE Users based on email for now
+CLOSED: [2019-01-27 Sun 16:51]
 
 ** TODO Generate initial macaroon secret 
-
 ** TODO Backer balance
 
 - Added to by subscriptions and donations
@@ -128,3 +128,8 @@ If you become a backer, you immediately get access to N backer-only posts
 ** TODO Discord integration
 
 ** TODO Lightning button next to payment request with link
+
+** DONE Setup hspec
+CLOSED: [2019-01-20 Sun 17:01]
+** DONE Initial balance tests
+CLOSED: [2019-01-20 Sun 17:01]

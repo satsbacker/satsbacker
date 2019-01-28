@@ -4,13 +4,16 @@
 
 module Satsbacker.Cli where
 
+import Control.Concurrent.MVar (MVar, withMVar)
+import Data.Functor (void)
+import Data.List.NonEmpty (NonEmpty(..))
+import Data.Text (Text)
 import Database.SQLite.Simple
 import Database.SQLite.Simple.ToField
-import Control.Concurrent.MVar (MVar, withMVar)
 import System.Exit (exitFailure)
-import Data.Text (Text)
 
 import qualified Data.Text as T
+import qualified Data.List.NonEmpty as NE
 
 import Bitcoin.Denomination
 
@@ -76,7 +79,7 @@ processArgs cfg@Config{..} arg rest =
           setSiteConfig cfgConn key val
 
       ("test-data", _) ->
-          testData cfgConn
+          void (testData cfgConn)
 
       (_, _) ->
           usage
@@ -103,7 +106,7 @@ usage = do
 
 
 
-testData :: MVar Connection -> IO ()
+testData :: MVar Connection -> IO (NonEmpty TierDef)
 testData mvconn = do
   user' <- createUser (Plaintext "test")
   let user = user' { userEmail = Email "jb55@jb55.com"
@@ -115,10 +118,10 @@ testData mvconn = do
     let tiers = testTierData (UserId userId)
     execute_ conn "update site set (hostname) = ('satsbacker.com')"
     mapM_ (insert conn) tiers
-  return ()
+    return tiers
 
 
-testTierData :: UserId -> [TierDef]
+testTierData :: UserId -> NonEmpty TierDef
 testTierData userId =
   let
       newT f b d =
@@ -128,9 +131,8 @@ testTierData userId =
         , tierAmountMSats = (toMsats b)
         }
   in
-  [
-    newT 1 (bits 100) "Don't have much? That's ok, every bit helps!"
-  , newT 5 (bits 1000) "Gain access to periodic backer-only blog posts and updates"
+  newT 1 (bits 100) "Don't have much? That's ok, every bit helps!" :|
+  [ newT 5 (bits 1000) "Gain access to periodic backer-only blog posts and updates"
   , newT 15 (bits 5000) $ T.unwords $
       "In addition to the previous levels, " :
       "gain access to the satsbacker beta " :
@@ -141,9 +143,9 @@ testTierData userId =
       "optionally listed in the satsbacker hall of fame. " : []
   ]
 
-testTiers :: UserId -> [Tier]
+testTiers :: UserId -> NonEmpty Tier
 testTiers userId =
-    flip map (testTierData userId) $ \tdef ->
+    flip NE.map (testTierData userId) $ \tdef ->
         Tier { tierDef = tdef
              , tierId = 1
              , tierStats = TierStats 0

@@ -5,10 +5,10 @@
 
 module Satsbacker.Config where
 
-import UnliftIO.Concurrent (forkIO)
 import Control.Concurrent.MVar
-import Control.Monad.IO.Class
 import Control.Exception (SomeException, try)
+import Control.Monad (unless)
+import Control.Monad.IO.Class
 import Control.Monad.Logger
 import Data.Aeson
 import Data.Aeson.Types
@@ -16,7 +16,7 @@ import Data.Functor (void)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Text (Text)
-import Database.SQLite.Simple (Connection, execute, query_, Only(..))
+import Database.SQLite.Simple
 import Foreign.C.Types (CTime(..))
 import Network.Mail.SMTP (Address(..))
 import Network.RPC (rpc)
@@ -24,8 +24,10 @@ import System.Environment (lookupEnv)
 import System.Posix.Time (epochTime)
 import System.Timeout (timeout)
 import Text.Read (readMaybe)
+import UnliftIO.Concurrent (forkIO)
 
 import Bitcoin.Network
+import Bitcoin.Denomination (MSats(..))
 import Crypto.Macaroons (Secret(..))
 import Database.SQLite.Table
 import Network.RPC
@@ -35,6 +37,7 @@ import Satsbacker.Data.Invoice
 import Satsbacker.Data.InvoiceId
 import Satsbacker.Data.Site (Site(..), HostName(..), Protocol(..))
 import Satsbacker.Data.Subscription
+import Satsbacker.Data.Posting
 import Satsbacker.Data.Tiers (TierDef(..))
 import Satsbacker.Templates
 import Text.Mustache (Template)
@@ -123,9 +126,9 @@ persistPayIndex conn payind =
 
 
 persistSubFromInvId :: (MonadIO m, MonadLogger m)
-                    => MVar Connection -> InvId -> m (Maybe Subscription)
-persistSubFromInvId mvconn (InvId invId) = do
-  minvRef <- fetchOneL mvconn (search "invoice_id" invId)
+                    => MVar Connection -> InvId -> MSats -> m (Maybe Subscription)
+persistSubFromInvId mvconn invId amount = do
+  minvRef <- fetchOneL mvconn (search "invoice_id" (getInvId invId))
 
   case minvRef of
     Nothing -> do logErrorN $ "couldn't find paid invoiceId "
@@ -149,7 +152,18 @@ persistSubFromInvId mvconn (InvId invId) = do
                 , subInvoiceId   = invRefInvoiceId
                 }
 
-      _ <- insertL mvconn sub
+      _ <- liftIO $ withMVar mvconn $ \conn ->
+        withTransaction conn $ do
+          subId <- insert conn sub
+          let posting = Posting {
+                          postingSubId     = subId
+                        , postingUserEmail = invRefEmail
+                        , postingAmount    = amount
+                        , postingNote      = SubNew
+                        , postingInvId     = invRefInvoiceId
+                        }
+          insert conn posting
+
       return (Just sub)
 
 
@@ -162,7 +176,11 @@ waitInvoices !errs !payindex !cfg@Config{..} = do
     Left err -> do logErrorN (T.pack (show err))
                    waitInvoices (errs + 1) payindex cfg
     Right !wi@(WaitInvoice (!index, !inv)) -> do
-      _sub <- persistSubFromInvId cfgConn (invoiceId (getCLInvoice inv))
+      let invoice@Invoice{..} = getCLInvoice inv
+      unless (isPaid invoice) (liftIO (fail "Invoice not paid"))
+      amount <- maybe (fail "Invoice does not have paid amount")
+                      return invoiceMSat
+      _sub <- persistSubFromInvId cfgConn invoiceId amount
       isEmpty <- liftIO (isEmptyMVar cfgPayNotify)
       if isEmpty
         then liftIO (putMVar cfgPayNotify wi)
