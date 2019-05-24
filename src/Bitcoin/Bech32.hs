@@ -2,6 +2,7 @@
 
 {- Copied from Network.Haskoin.Address.Bech32 -}
 {- Copied from reference implementation contributed by Marko Bencun -}
+
 module Bitcoin.Bech32
     ( HRP
     , Bech32
@@ -64,6 +65,8 @@ word5 :: Integral a => a -> Word5
 word5 x = UnsafeWord5 (fromIntegral x .&. 31)
 {-# INLINE word5 #-}
 {-# SPECIALIZE INLINE word5 :: Word8 -> Word5 #-}
+
+-- TODO: FIX ME: https://github.com/input-output-hk/cardano-wallet/pull/312
 
 -- | Convert a five-bit word into a number.
 fromWord5 :: Num a => Word5 -> a
