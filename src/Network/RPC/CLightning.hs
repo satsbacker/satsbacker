@@ -14,7 +14,7 @@ import Satsbacker.Data.Invoice
 
 import qualified Data.HashMap.Lazy as Map
 
-listpeers :: MonadIO m => SocketConfig -> m [Peer]
+listpeers :: (MonadIO m, MonadFail m) => SocketConfig -> m [Peer]
 listpeers cfg = getPeersResp <$> rpc_ cfg "listpeers"
 
 keyStr :: Text -> Value -> Maybe Text
@@ -26,22 +26,22 @@ keyStr str (Object obj) =
 keyStr _ _ = Nothing
 
 
-newaddr :: MonadIO m => SocketConfig -> Text -> m Text
+newaddr :: (MonadIO m, MonadFail m) => SocketConfig -> Text -> m Text
 newaddr cfg addrtype = do
   res :: Value <- rpc cfg "newaddr" [addrtype]
   maybe (fail "Could not decode address from newaddr") return
         (keyStr "address" res)
 
 
-listfunds :: MonadIO m => SocketConfig -> m [Output]
+listfunds :: (MonadIO m, MonadFail m) => SocketConfig -> m [Output]
 listfunds cfg = listFundsOutputs <$> rpc_ cfg "listfunds"
 
 
-listinvoices :: MonadIO m => SocketConfig -> Text -> m [Invoice]
+listinvoices :: (MonadIO m, MonadFail m) => SocketConfig -> Text -> m [Invoice]
 listinvoices cfg invId =
   getCLInvoices <$> rpc cfg "listinvoices" [invId]
 
 
-waitinvoice :: MonadIO m => SocketConfig -> Text -> m (Maybe Invoice)
+waitinvoice :: (MonadIO m, MonadFail m) => SocketConfig -> Text -> m (Maybe Invoice)
 waitinvoice cfg invId =
   fmap getCLInvoice <$> rpc cfg "waitinvoice" [invId]

@@ -125,7 +125,7 @@ persistPayIndex conn payind =
   execute conn "UPDATE payindex SET payindex = ?" (Only payind)
 
 
-persistSubFromInvId :: (MonadIO m, MonadLogger m)
+persistSubFromInvId :: (MonadIO m, MonadLogger m, MonadFail m)
                     => MVar Connection -> InvId -> MSats -> m (Maybe Subscription)
 persistSubFromInvId mvconn invId amount = do
   minvRef <- fetchOneL mvconn (search "invoice_id" (getInvId invId))
@@ -167,7 +167,7 @@ persistSubFromInvId mvconn invId amount = do
       return (Just sub)
 
 
-waitInvoices :: (MonadIO m, MonadLogger m) => Int -> Int -> Config -> m ()
+waitInvoices :: (MonadIO m, MonadLogger m, MonadFail m) => Int -> Int -> Config -> m ()
 waitInvoices 10 _ _ = fail "Too many errors when waiting for payments"
 waitInvoices !errs !payindex !cfg@Config{..} = do
   ewi :: Either SomeException WaitInvoice <-
@@ -189,7 +189,7 @@ waitInvoices !errs !payindex !cfg@Config{..} = do
       waitInvoices 0 index cfg
 
 
-getLightningConfig :: (MonadIO m, MonadLogger m)
+getLightningConfig :: (MonadIO m, MonadLogger m, MonadFail m)
                    => SocketConfig -> m LightningConfig
 getLightningConfig cfg = do
   mlncfg <- liftIO $ timeout (5 * 1000000) (rpc_ cfg "getinfo")

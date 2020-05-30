@@ -68,7 +68,7 @@ makeRequest method params =
 noArgs :: Text -> Value
 noArgs p = makeRequest p (mempty :: Array)
 
-call :: (MonadLoggerIO m, ToJSON a, FromJSON b) => JsonRPC -> Text -> a -> m b
+call :: (MonadLoggerIO m, ToJSON a, FromJSON b, MonadFail m) => JsonRPC -> Text -> a -> m b
 call JsonRPC{..} method params =
     let
         reqData = makeRequest method params
@@ -87,5 +87,5 @@ call JsonRPC{..} method params =
           Right jrpcres  -> do
             return (jrpcResult jrpcres)
 
-call_ :: (MonadLoggerIO m, FromJSON b) => JsonRPC -> Text -> m b
+call_ :: (MonadLoggerIO m, FromJSON b, MonadFail m) => JsonRPC -> Text -> m b
 call_ rpc method = call rpc method (mempty :: Array)

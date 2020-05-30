@@ -44,7 +44,7 @@ createTestInvRef tierId mvconn = do
       }
 
 
-createTestSubscription :: (MonadIO m, MonadLogger m) => MVar Connection -> m ()
+createTestSubscription :: (MonadIO m, MonadLogger m, MonadFail m) => MVar Connection -> m ()
 createTestSubscription mvconn = do
   tiers <- liftIO (testData mvconn)
   let TierDef{..} = NE.head tiers
@@ -70,7 +70,7 @@ hasPositiveBalance mvconn (SubId subId) = do
 
 
 
-subscriptionTests :: (MonadIO m, MonadLogger m)
+subscriptionTests :: (MonadIO m, MonadLogger m, MonadFail m)
                   => (m () -> IO ()) -> Config -> IO ()
 subscriptionTests runner Config{..} = hspec $ do
   describe "subscriptions" $ do

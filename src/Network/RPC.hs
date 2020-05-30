@@ -25,7 +25,7 @@ import qualified Data.ByteString.Char8 as B8
 
 type instance Resp Value = Value
 
-rpc :: (MonadIO m, ToJSON params, FromJSON resp)
+rpc :: (MonadIO m, ToJSON params, FromJSON resp, MonadFail m)
     => SocketConfig -> Text -> params -> m resp
 rpc cfg method params = do
   let req = encode (makeRequest method params)
@@ -38,6 +38,6 @@ rpc cfg method params = do
     Left e -> fail (show e)
 
 
-rpc_ :: (MonadIO m, FromJSON resp)
+rpc_ :: (MonadIO m, FromJSON resp, MonadFail m)
      => SocketConfig -> Text -> m resp
 rpc_ cfg method = rpc cfg method (mempty :: Array)

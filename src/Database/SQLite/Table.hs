@@ -101,7 +101,7 @@ fetch conn (Search (term, val)) (Limit lim) =
     in query conn (Query q) (Only val)
 
 
-justOne :: Monad m => m [b] -> m b
+justOne :: (Monad m, MonadFail m) => m [b] -> m b
 justOne m = do
   res <- m
   case res of

@@ -26,7 +26,7 @@ cleanupDb Config{..} =
       filename = dbFilename network
   in removeFile filename
 
-mainRun :: (MonadIO m, MonadLogger m) => Runner m -> IO ()
+mainRun :: (MonadIO m, MonadLogger m, MonadFail m) => Runner m -> IO ()
 mainRun runner =
   bracket (runner testConfig) cleanupDb (allTests runner)
 
@@ -36,7 +36,7 @@ mainNoLog = mainRun runNoLoggingT
 mainWithLog :: IO ()
 mainWithLog = mainRun runStderrLoggingT
 
-allTests :: (MonadIO m, MonadLogger m) => Runner m -> Config -> IO ()
+allTests :: (MonadIO m, MonadLogger m, MonadFail m) => Runner m -> Config -> IO ()
 allTests runner cfg = hspec $ do
   runIO (subscriptionTests runner cfg)
 

@@ -42,7 +42,7 @@ testLightningConfig =
   }
 
 
-testConfig :: (MonadIO m, MonadLogger m) => m Config
+testConfig :: (MonadIO m, MonadLogger m, MonadFail m) => m Config
 testConfig = do
   port      <- liftIO getPort
   socketCfg <- getSocketConfig
