@@ -19,7 +19,6 @@ import Data.Text (Text)
 import Database.SQLite.Simple
 import Foreign.C.Types (CTime(..))
 import Network.Mail.SMTP (Address(..))
-import Network.RPC (rpc)
 import System.Environment (lookupEnv)
 import System.Posix.Time (epochTime)
 import System.Timeout (timeout)
@@ -31,7 +30,6 @@ import Bitcoin.Denomination (MSats(..))
 import Crypto.Macaroons (Secret(..))
 import Database.SQLite.Table
 import Network.RPC
-import Network.RPC.Config (SocketConfig(..))
 import Satsbacker.DB
 import Satsbacker.Data.Invoice
 import Satsbacker.Data.InvoiceId

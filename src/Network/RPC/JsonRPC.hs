@@ -5,7 +5,6 @@ module Network.RPC.JsonRPC where
 
 import Data.Aeson
 import Data.ByteString (ByteString)
-import Data.Monoid ((<>))
 import Control.Monad.Logger
 import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text)

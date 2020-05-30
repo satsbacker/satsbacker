@@ -11,7 +11,6 @@ module Invoicing
 
 import Blaze.ByteString.Builder (fromByteString)
 import Control.Concurrent
-import Control.Concurrent.Chan (Chan, writeChan)
 import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8)

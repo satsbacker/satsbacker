@@ -3,7 +3,6 @@
 
 module Network.RPC.CLightning where
 
-import Data.Maybe (maybe)
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Aeson (Value(..))
 import Data.Text (Text)
