@@ -6,6 +6,9 @@ GHCOPS=-j -Wall -isrc -O0
 satsbacker: src/Main.hs
 	ghc $(GHCOPS) --make $< -o $@
 
+clean:
+	rm -f satsbackers
+
 check: tests
 	./tests
 
